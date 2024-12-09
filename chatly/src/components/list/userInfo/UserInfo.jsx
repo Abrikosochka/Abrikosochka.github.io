@@ -2,7 +2,7 @@ import "./userInfo.css"
 import { getCurrentUser } from '../../../lib/auth'
 
 const Userinfo = () => {
-    const currentUser = getCurrentUser(); // Получаем данные пользователя из localStorage
+    const currentUser = getCurrentUser();
 
     return (
         <div className='userInfo'>
