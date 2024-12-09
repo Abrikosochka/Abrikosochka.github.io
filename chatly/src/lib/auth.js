@@ -1,6 +1,8 @@
 const USER_KEY = 'userId';
 const USER_DATA_KEY = 'userData';
 const CHATS_KEY = 'userChats';
+const MESSAGES_KEY = 'chatMessages';
+const LAST_MESSAGES_KEY = 'lastMessages';
 
 let currentUserId = localStorage.getItem(USER_KEY);
 let currentUserData = JSON.parse(localStorage.getItem(USER_DATA_KEY));
@@ -51,4 +53,66 @@ export function addChat(chat) {
 //Получение данных пользователей в чате
 export function getUserChats() {
      return currentChats;
+}
+
+// Получение сообщений для конкретного чата
+export function getChatMessages(chatId) {
+    try {
+        const messages = localStorage.getItem(`chat_messages_${chatId}`);
+        return messages ? JSON.parse(messages) : [];
+    } catch (error) {
+        console.error('Ошибка при получении сообщений:', error);
+        return [];
+    }
+}
+
+// Сохранение сообщений чата
+export function setChatMessages(chatId, messages) {
+    try {
+        localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(messages));
+    } catch (error) {
+        console.error('Ошибка при сохранении сообщений:', error);
+    }
+}
+
+// Добавление нового сообщения
+export function addMessage(chatId, message) {
+    try {
+        const messages = getChatMessages(chatId);
+        // Проверяем, нет ли уже такого сообщения
+        const messageExists = messages.some(m => m.message_id === message.message_id);
+        
+        if (!messageExists) {
+            // Добавляем новое сообщение в конец массива
+            const updatedMessages = [...messages, message];
+            // Сортируем по дате
+            updatedMessages.sort((a, b) => new Date(a.date) - new Date(b.date));
+            // Сохраняем обновленный список
+            setChatMessages(chatId, updatedMessages);
+            return updatedMessages;
+        }
+        
+        return messages;
+    } catch (error) {
+        console.error('Ошибка при добавлении сообщения:', error);
+        return [];
+    }
+}
+
+// Получение последнего сообщения для чата
+export function getLastMessage(chatId) {
+    const lastMessages = JSON.parse(localStorage.getItem(LAST_MESSAGES_KEY) || '{}');
+    return lastMessages[chatId];
+}
+
+// Сохранение последнего сообщения
+export function setLastMessage(chatId, message) {
+    const lastMessages = JSON.parse(localStorage.getItem(LAST_MESSAGES_KEY) || '{}');
+    lastMessages[chatId] = message;
+    localStorage.setItem(LAST_MESSAGES_KEY, JSON.stringify(lastMessages));
+}
+
+// Получение всех последних сообщений
+export function getAllLastMessages() {
+    return JSON.parse(localStorage.getItem(LAST_MESSAGES_KEY) || '{}');
 }

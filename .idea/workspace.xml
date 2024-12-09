@@ -5,46 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7af9ee77-d0b9-462a-87f0-8e8253f7489c" name="Changes" comment="new_files">
-      <change afterPath="$PROJECT_DIR$/chatly/.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/arrowDown.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/arrowUp.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/camera.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/download.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/edit.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/emoji.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/img.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/info.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/mic.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/minus.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/more.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/phone.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/plus.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/search.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/public/video.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/Login/Login.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/Login/login.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/Notification/Notification.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/list/List.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/list/chatList/ChatList.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/list/chatList/chatList.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/list/list.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/list/userInfo/UserInfo.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/list/userInfo/userInfo.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/lib/auth.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chatly/src/lib/supabaseClient.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/chatly/src/components/Chat/chat.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/chatly/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/chatly/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/public/vite.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/App.css" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/App.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chatly/public/avatar.png" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/public/avatar.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chatly/public/bg.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/public/bg.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/chatly/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/assets/react.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/index.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/main.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/main.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/vite.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chatly/src/components/list/chatList/ChatList.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/components/list/chatList/ChatList.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chatly/src/components/list/chatList/chatList.css" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/components/list/chatList/chatList.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chatly/src/lib/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/lib/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chatly/src/lib/supabaseClient.js" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/lib/supabaseClient.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,23 +49,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/artem/OneDrive/Рабочий стол/Chatly/chatly/public&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\WebStorm 2024.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/artem/OneDrive/Рабочий стол/NotebookAI",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\WebStorm 2024.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\artem\OneDrive\Рабочий стол\Chatly\chatly\public" />
@@ -136,6 +107,12 @@
       <workItem from="1732695627013" duration="5760000" />
       <workItem from="1732704446585" duration="2122000" />
       <workItem from="1732707304882" duration="2303000" />
+      <workItem from="1732882755117" duration="42000" />
+      <workItem from="1733050446319" duration="845000" />
+      <workItem from="1733125564529" duration="3479000" />
+      <workItem from="1733134466211" duration="4887000" />
+      <workItem from="1733312871462" duration="2432000" />
+      <workItem from="1733646654920" duration="184000" />
     </task>
     <task id="LOCAL-00001" summary="start_vite_app">
       <option name="closed" value="true" />

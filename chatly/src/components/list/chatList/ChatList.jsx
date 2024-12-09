@@ -1,118 +1,206 @@
 import "./chatList.css"
-import { getCurrentUserId, getCurrentUser } from '../../../lib/auth'
+import { getCurrentUserId, getCurrentUser, getLastMessage } from '../../../lib/auth'
 import { setUserChats } from "../../../lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient.js";
+import { useChatStore } from '../../../lib/chatStore';
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now - d;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    // Если сообщение отправлено сегодня, показываем только время
+    if (days === 0) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    // Если вчера
+    else if (days === 1) {
+        return 'вчера';
+    }
+    // Если на этой неделе
+    else if (days < 7) {
+        const options = { weekday: 'short' };
+        return d.toLocaleString('ru-RU', options);
+    }
+    // Иначе показываем дату
+    else {
+        const options = { day: '2-digit', month: '2-digit', year: '2-digit' };
+        return d.toLocaleString('ru-RU', options);
+    }
+};
 
 function ChatList() {
     const userId = getCurrentUserId();
     const currentUser = getCurrentUser();
-    const [chats, setChats] = useState([]);
+    const [processedChats, setProcessedChats] = useState([]);
     const [addMode, setAddMode] = useState(false);
     const [inputText, setInputText] = useState("");
+    const { setCurrentChat } = useChatStore();
+    const [lastMessages, setLastMessages] = useState({});
 
-    useEffect(() => {
-        const getChats = async () => {
-            if (!userId) {
-                console.error('userId отсутствует');
-                return;
-            }
+    // Выносим getChats за пределы useEffect
+    const getChats = async () => {
+        if (!userId) {
+            console.error('userId отсутствует');
+            return;
+        }
 
+        try {
+            console.log('Fetching chats for user:', userId);
             const { data, error } = await supabase.rpc('get_user_chats', {
                 user_id_param: parseInt(userId)
             });
 
-            console.log('Ответ от Supabase:', { data, error });
-
             if (error) {
-                console.error('Error:', error);
+                console.error('Ошибка Supabase:', error);
                 return;
             }
 
-            // Убедимся, что у нас есть массив и все элементы валидны
-            const validChats = Array.isArray(data) ? data.filter(chat => chat !== null) : [];
-            console.log('Валидные чаты:', validChats);
+            if (!data) {
+                console.error('Данные не получены');
+                return;
+            }
 
-            setChats(validChats);
-            setUserChats(validChats);
+            console.log('Received raw data from supabase:', data);
+
+            // Обработка чатов
+            const validChats = data
+                .filter(chat => {
+                    if (!chat) {
+                        console.log('Filtering out null chat');
+                        return false;
+                    }
+                    return true;
+                })
+                .map(chat => {
+                    console.log('Processing chat:', chat);
+                    const members = chat.members || {};
+                    
+                    if (chat.is_group) {
+                        const processedChat = {
+                            ...chat,
+                            displayName: chat.chat_name || `Групповой чат ${chat.chat_id}`,
+                            displayImage: chat.chat_picture || "/group-avatar.png",
+                            displayStatus: ''
+                        };
+                        console.log('Processed group chat:', processedChat);
+                        return processedChat;
+                    } else {
+                        const otherUser = Object.values(members).find(member => member.id !== parseInt(userId)) || {};
+                        const isBlocked = currentUser?.blocked?.includes(otherUser.id);
+                        
+                        const processedChat = {
+                            ...chat,
+                            displayName: isBlocked ? "User" : otherUser.username || 'Неизвестный пользователь',
+                            displayImage: isBlocked ? "/avatar.png" : otherUser.avatar || "/avatar.png",
+                            displayStatus: otherUser.status || 'Нет статуса'
+                        };
+                        console.log('Processed personal chat:', processedChat);
+                        return processedChat;
+                    }
+                });
+
+            console.log('Final processed chats:', validChats);
+            setProcessedChats(validChats);
+        } catch (error) {
+            console.error('Ошибка при получении чатов:', error);
+            alert('Ошибка при загрузке чатов. Пожалуйста, проверьте подключение к интернету и обновите страницу.');
+        }
+    };
+
+    useEffect(() => {
+        console.log('ChatList useEffect triggered');
+        getChats();
+
+        // Подписка на новые сообщения
+        const subscription = supabase
+            .channel('messages_channel')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages'
+            }, async (payload) => {
+                console.log('New message received:', payload);
+                const newMessage = payload.new;
+                
+                // Обновляем последние сообщения
+                setLastMessages(prev => ({
+                    ...prev,
+                    [newMessage.chat_id]: {
+                        content: newMessage.content,
+                        sender_id: newMessage.sender_id,
+                        sender_name: newMessage.sender_username,
+                        date: newMessage.date
+                    }
+                }));
+            })
+            .subscribe();
+
+        // Загружаем начальные последние сообщения
+        const loadInitialLastMessages = async () => {
+            const updatedLastMessages = {};
+            for (const chat of processedChats) {
+                const lastMessage = getLastMessage(chat.chat_id);
+                if (lastMessage) {
+                    updatedLastMessages[chat.chat_id] = lastMessage;
+                }
+            }
+            setLastMessages(updatedLastMessages);
         };
 
-        getChats();
-    }, [userId]);
+        loadInitialLastMessages();
 
-    // Безопасная фильтрация чатов
-    const filteredChats = chats.filter(chat => {
-        console.log('фильтр чата:', chat); // Отладка
-        console.log('фильтр чата:', chat.is_group); // Отладка
+        return () => {
+            console.log('Cleaning up subscription');
+            subscription.unsubscribe();
+        };
+    }, [userId, currentUser, processedChats]);
 
+    // Добавим лог для отслеживания состояния processedChats
+    useEffect(() => {
+        console.log('processedChats updated:', processedChats);
+    }, [processedChats]);
+
+    // Фильтрация обработанных чатов
+    const filteredChats = processedChats.filter(chat => {
         if (!chat) return false;
-
-        try {
-            if (chat.is_group) {
-                return chat.chat_name && chat.chat_name.toLowerCase().includes(inputText.toLowerCase());
-            } else {
-                const members = chat.members || {};
-                const otherUsers = Object.values(members);
-                return otherUsers.some(user =>
-                    user && user.username && user.username.toLowerCase().includes(inputText.toLowerCase())
-                );
-            }
-        } catch (error) {
-            console.error('Ошибка при фильтрации чата:', error, chat);
-            return false;
-        }
+        return chat.displayName.toLowerCase().includes(inputText.toLowerCase());
     });
 
+    const handleChatClick = (chat) => {
+        console.log('Clicked chat:', chat);
+        setCurrentChat(chat);
+    };
+
     const renderChatItem = (chat) => {
-        console.log('Начало рендеринга чата:', chat);
+        const lastMessage = lastMessages[chat.chat_id] || chat.last_message;
+        const messageText = lastMessage ? (
+            chat.is_group ? 
+                `${lastMessage.sender_name}: ${lastMessage.content}` :
+                lastMessage.content
+        ) : 'Нет сообщений';
 
-        if (!chat) {
-            console.log('Чат пустой');
-            return null;
-        }
-
-        const members = chat.members || {};
-        console.log('Участники чата:', members);
-
-        // Для личного чата
-        if (!chat.is_group) {
-            const otherUser = Object.values(members)[0] || {};
-            console.log('Данные другого пользователя:', otherUser);
-
-            return (
-                <div className="item" key={chat.chat_id}>
-                    <img
-                        src={currentUser?.blocked?.includes(otherUser.id)
-                            ? "/avatar.png"
-                            : otherUser.avatar || "/avatar.png"
-                        }
-                        alt="avatar"
-                    />
-                    <div className="texts">
-                        <span>
-                            {currentUser?.blocked?.includes(otherUser.id)
-                                ? "User"
-                                : otherUser.username || 'Неизвестный пользователь'
-                            }
-                        </span>
-                        <p>{otherUser.status || 'Нет статуса'}</p>
-                    </div>
-                </div>
-            );
-        }
-
-        // Для группового чата
-        const memberCount = Object.keys(members).length + 1;
         return (
-            <div className="item" key={chat.chat_id}>
+            <div 
+                className="item" 
+                key={chat.chat_id}
+                onClick={() => handleChatClick(chat)}
+            >
                 <img
-                    src={chat.chat_picture || "/group-avatar.png"}
-                    alt="chat avatar"
+                    src={chat.displayImage}
+                    alt="avatar"
                 />
                 <div className="texts">
-                    <span>{chat.chat_name || 'Без названия'}</span>
-                    <p>{memberCount} участников</p>
+                    <span>{chat.displayName}</span>
+                    <p>{messageText}</p>
                 </div>
+                {lastMessage && (
+                    <span className="message-time">
+                        {formatDate(lastMessage.date)}
+                    </span>
+                )}
             </div>
         );
     };
@@ -139,10 +227,7 @@ function ChatList() {
 
             <div className="chat-items">
                 {filteredChats.length > 0 ? (
-                    filteredChats.map((chat, index) => {
-                        console.log(`Рендеринг чата ${index}:`, chat);
-                        return renderChatItem(chat);
-                    })
+                    filteredChats.map((chat) => renderChatItem(chat))
                 ) : (
                     <div className="no-chats">Нет доступных чатов</div>
                 )}

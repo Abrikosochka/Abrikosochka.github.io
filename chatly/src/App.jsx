@@ -2,14 +2,15 @@ import { useState } from 'react'
 import Notification from "./components/Notification/Notification.jsx";
 import Login from './components/Login/Login'
 import { getCurrentUserId } from './lib/auth'
-import List from './components/List/List'
+import List from './components/list/List'
+import Chat from './components/Chat/chat.jsx'
+import { useChatStore } from './lib/chatStore'
 import './App.css'
 
 function App() {
-    // Используем useState для отслеживания изменений userId
     const [userId, setUserId] = useState(getCurrentUserId());
+    const { currentChat } = useChatStore();
 
-    // Функция для обновления userId, которую передадим в Login
     const handleLogin = (newUserId) => {
         setUserId(newUserId);
     };
@@ -20,10 +21,11 @@ function App() {
                 <Login onLoginSuccess={handleLogin} />
             ) : (
                 <>
-                    <List/>
+                    <List />
+                    {currentChat && <Chat />}
                 </>
             )}
-            <Notification/>
+            <Notification />
         </div>
     )
 }
