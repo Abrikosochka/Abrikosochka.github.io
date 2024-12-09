@@ -113,15 +113,15 @@ function Chat() {
 
             if (data && data[0]) {
                 const newMessage = {
-                    message_id: data[0].message_id,
+                    message_id: data[0].id,
                     chat_id: data[0].chat_id,
                     sender_id: data[0].sender_id,
                     content: data[0].content,
                     date: data[0].date,
                     is_edit: data[0].is_edit,
                     is_read: data[0].is_read,
-                    sender_username: data[0].sender_username,
-                    sender_avatar: data[0].sender_avatar
+                    sender_username: currentUser.username,
+                    sender_avatar: currentUser.avatar
                 };
 
                 // Обновляем состояние и localStorage
@@ -134,7 +134,7 @@ function Chat() {
                     content: text,
                     sender_id: currentUser.id,
                     sender_name: currentUser.username,
-                    date: new Date().toISOString(),
+                    date: data[0].date,
                     sender_avatar: currentUser.avatar
                 });
 
@@ -197,12 +197,15 @@ function Chat() {
 
     // Добавить функцию форматирования времени
     const formatDate = (date) => {
+        // Создаем дату и добавляем 3 часа
         const d = new Date(date);
+        d.setHours(d.getHours() + 3);  // Добавляем 3 часа
+        
         const now = new Date();
         const diff = now - d;
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-        // Если сообщене отправлено сегодня, показываем только время
+        // Если сообщение отправлено сегодня, показываем только время
         if (days === 0) {
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }

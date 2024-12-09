@@ -100,3 +100,29 @@
         }
     }
 }
+
+.addUser {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Обновим стиль для контейнера чатов, чтобы AddUser корректно вписывался */
+.chat-items {
+    overflow-y: auto;
+    max-height: calc(100% - 60px); /* 60px - примерная высота поисковой строки */
+}
+
+/* Если AddUser открыт, уменьшаем максимальную высоту списка чатов */
+.addMode .chat-items {
+    max-height: calc(100% - 300px); /* Регулируйте значение в зависимости от высоты AddUser */
+}

@@ -4,9 +4,12 @@ import { setUserChats } from "../../../lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient.js";
 import { useChatStore } from '../../../lib/chatStore';
+import AddUser from './addUser/AddUser';
 
 const formatDate = (date) => {
     const d = new Date(date);
+    d.setHours(d.getHours() + 3);  // Добавляем 3 часа
+    
     const now = new Date();
     const diff = now - d;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -217,13 +220,15 @@ function ChatList() {
                         onChange={(e) => setInputText(e.target.value)}
                     />
                 </div>
-                <img
-                    src={addMode ? "/minus.png" : "/plus.png"}
-                    onClick={() => setAddMode(!addMode)}
-                    alt="add friend"
+                <img 
+                    src={addMode ? "../../../../public/minus.png" : "../../../../public/plus.png"} 
+                    onClick={() => setAddMode(!addMode)} 
+                    alt="add friend" 
                     className="add"
                 />
             </div>
+
+            {addMode && <AddUser onClose={() => setAddMode(false)} />}
 
             <div className="chat-items">
                 {filteredChats.length > 0 ? (

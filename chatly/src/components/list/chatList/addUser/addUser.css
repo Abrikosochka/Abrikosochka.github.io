@@ -1,0 +1,234 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(28, 14, 40, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: rgba(45, 25, 65, 0.95);
+    border-radius: 10px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    animation: modalAppear 0.3s ease-out;
+}
+
+.modal-content form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.modal-content input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(28, 14, 40, 0.5);
+    color: white;
+}
+
+.modal-content button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(89, 46, 131, 0.8);
+    color: white;
+    cursor: pointer;
+}
+
+.modal-content button:hover {
+    background-color: rgba(106, 57, 155, 0.9);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: white;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.selected-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.selected-user-tag {
+    background-color: rgba(89, 46, 131, 0.8);
+    padding: 5px 10px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.selected-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.selected-user-name {
+    color: white;
+    font-size: 14px;
+}
+
+.remove-user {
+    cursor: pointer;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0 4px;
+}
+
+.remove-user:hover {
+    color: white;
+}
+
+.user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.group-name-input {
+    margin-bottom: 15px;
+}
+
+.group-name-input input {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(28, 14, 40, 0.5);
+    color: white;
+}
+
+.create-chat-btn {
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    background-color: rgba(89, 46, 131, 0.8);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.create-chat-btn:hover {
+    background-color: rgba(106, 57, 155, 0.9);
+}
+
+.create-chat-btn:disabled {
+    background-color: rgba(89, 46, 131, 0.3);
+    cursor: not-allowed;
+}
+
+button.selected {
+    background-color: rgba(106, 57, 155, 0.9);
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Стилизация скроллбара */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background-color: rgba(89, 46, 131, 0.5);
+    border-radius: 4px;
+}
+
+.search-results {
+    margin-top: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.search-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background-color: rgba(89, 46, 131, 0.5);
+    border-radius: 4px;
+}
+
+.error-message {
+    color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    text-align: center;
+}
