@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 const USER_KEY = 'userId';
 const USER_DATA_KEY = 'userData';
 const CHATS_KEY = 'userChats';
@@ -116,3 +118,27 @@ export function setLastMessage(chatId, message) {
 export function getAllLastMessages() {
     return JSON.parse(localStorage.getItem(LAST_MESSAGES_KEY) || '{}');
 }
+
+// Добавим новую функцию для обновления данных пользователя
+export const updateCurrentUserData = async (userId) => {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error) throw error;
+
+        if (data) {
+            // Обновляем также currentUserData в памяти
+            currentUserData = data;
+            localStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
+            return data;
+        }
+        return null;
+    } catch (err) {
+        console.error('Ошибка при обновлении данных пользователя:', err);
+        return null;
+    }
+};

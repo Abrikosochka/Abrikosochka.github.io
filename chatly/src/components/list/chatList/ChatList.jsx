@@ -43,128 +43,71 @@ function ChatList() {
     const { setCurrentChat } = useChatStore();
     const [lastMessages, setLastMessages] = useState({});
 
-    // Выносим getChats за пределы useEffect
-    const getChats = async () => {
-        if (!userId) {
-            console.error('userId отсутствует');
-            return;
-        }
-
-        try {
-            console.log('Fetching chats for user:', userId);
-            const { data, error } = await supabase.rpc('get_user_chats', {
-                user_id_param: parseInt(userId)
-            });
-
-            if (error) {
-                console.error('Ошибка Supabase:', error);
+    // Получение чатов
+    useEffect(() => {
+        const fetchChats = async () => {
+            if (!userId) {
+                console.error('userId отсутствует');
                 return;
             }
 
-            if (!data) {
-                console.error('Данные не получены');
-                return;
-            }
-
-            console.log('Received raw data from supabase:', data);
-
-            // Обработка чатов
-            const validChats = data
-                .filter(chat => {
-                    if (!chat) {
-                        console.log('Filtering out null chat');
-                        return false;
-                    }
-                    return true;
-                })
-                .map(chat => {
-                    console.log('Processing chat:', chat);
-                    const members = chat.members || {};
-                    
-                    if (chat.is_group) {
-                        const processedChat = {
-                            ...chat,
-                            displayName: chat.chat_name || `Групповой чат ${chat.chat_id}`,
-                            displayImage: chat.chat_picture || "/group-avatar.png",
-                            displayStatus: ''
-                        };
-                        console.log('Processed group chat:', processedChat);
-                        return processedChat;
-                    } else {
-                        const otherUser = Object.values(members).find(member => member.id !== parseInt(userId)) || {};
-                        const isBlocked = currentUser?.blocked?.includes(otherUser.id);
-                        
-                        const processedChat = {
-                            ...chat,
-                            displayName: isBlocked ? "User" : otherUser.username || 'Неизвестный пользователь',
-                            displayImage: isBlocked ? "/avatar.png" : otherUser.avatar || "/avatar.png",
-                            displayStatus: otherUser.status || 'Нет статуса'
-                        };
-                        console.log('Processed personal chat:', processedChat);
-                        return processedChat;
-                    }
+            try {
+                console.log('Fetching chats for user:', userId);
+                const { data, error } = await supabase.rpc('get_user_chats', {
+                    user_id_param: parseInt(userId)
                 });
 
-            console.log('Final processed chats:', validChats);
-            setProcessedChats(validChats);
-        } catch (error) {
-            console.error('Ошибка при получении чатов:', error);
-            alert('Ошибка при загрузке чатов. Пожалуйста, проверьте подключение к интернету и обновите страницу.');
-        }
-    };
-
-    useEffect(() => {
-        console.log('ChatList useEffect triggered');
-        getChats();
-
-        // Подписка на новые сообщения
-        const subscription = supabase
-            .channel('messages_channel')
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages'
-            }, async (payload) => {
-                console.log('New message received:', payload);
-                const newMessage = payload.new;
-                
-                // Обновляем последние сообщения
-                setLastMessages(prev => ({
-                    ...prev,
-                    [newMessage.chat_id]: {
-                        content: newMessage.content,
-                        sender_id: newMessage.sender_id,
-                        sender_name: newMessage.sender_username,
-                        date: newMessage.date
-                    }
-                }));
-            })
-            .subscribe();
-
-        // Загружаем начальные последние сообщения
-        const loadInitialLastMessages = async () => {
-            const updatedLastMessages = {};
-            for (const chat of processedChats) {
-                const lastMessage = getLastMessage(chat.chat_id);
-                if (lastMessage) {
-                    updatedLastMessages[chat.chat_id] = lastMessage;
+                if (error) {
+                    console.error('Ошибка Supabase:', error);
+                    return;
                 }
+
+                if (!data) {
+                    console.error('Данные не получены');
+                    return;
+                }
+
+                console.log('Received raw data from supabase:', data);
+
+                const validChats = data
+                    .filter(chat => chat)
+                    .map(chat => {
+                        console.log('Processing chat:', chat);
+                        const members = chat.members || {};
+                        
+                        if (chat.is_group) {
+                            const processedChat = {
+                                ...chat,
+                                displayName: chat.chat_name || `Групповой чат ${chat.chat_id}`,
+                                displayImage: chat.chat_picture || "/group-avatar.png",
+                                displayStatus: ''
+                            };
+                            console.log('Processed group chat:', processedChat);
+                            return processedChat;
+                        } else {
+                            const otherUser = Object.values(members).find(member => member.id !== parseInt(userId)) || {};
+                            const isBlocked = currentUser?.blocked?.includes(otherUser.id);
+                            
+                            const processedChat = {
+                                ...chat,
+                                displayName: isBlocked ? "User" : otherUser.username || 'Неизвестный пользователь',
+                                displayImage: isBlocked ? "/avatar.png" : otherUser.avatar || "/avatar.png",
+                                displayStatus: otherUser.status || 'Нет статуса'
+                            };
+                            console.log('Processed personal chat:', processedChat);
+                            return processedChat;
+                        }
+                    });
+
+                console.log('Final processed chats:', validChats);
+                setProcessedChats(validChats);
+            } catch (error) {
+                console.error('Ошибка при получении чатов:', error);
             }
-            setLastMessages(updatedLastMessages);
         };
 
-        loadInitialLastMessages();
-
-        return () => {
-            console.log('Cleaning up subscription');
-            subscription.unsubscribe();
-        };
-    }, [userId, currentUser, processedChats]);
-
-    // Добавим лог для отслеживания состояния processedChats
-    useEffect(() => {
-        console.log('processedChats updated:', processedChats);
-    }, [processedChats]);
+        fetchChats();
+    }, [userId]); // Зависимость только от userId
 
     // Фильтрация обработанных чатов
     const filteredChats = processedChats.filter(chat => {
@@ -174,6 +117,13 @@ function ChatList() {
 
     const handleChatClick = (chat) => {
         console.log('Clicked chat:', chat);
+        
+        if (!chat || !chat.chat_id) {
+            console.error('Invalid chat data:', chat);
+            return;
+        }
+
+        // Просто устанавливаем текущий чат
         setCurrentChat(chat);
     };
 
