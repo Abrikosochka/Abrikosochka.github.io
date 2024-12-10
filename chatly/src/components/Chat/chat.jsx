@@ -83,7 +83,7 @@ function Chat() {
         if (!text.trim() || !currentChat) return;
 
         try {
-            const { error } = await supabase.rpc('add_message', {
+            const { data, error } = await supabase.rpc('add_message', {
                 p_chat_id: parseInt(currentChat.chat_id),
                 p_sender_id: parseInt(currentUser.id),
                 p_content: text,
@@ -92,8 +92,27 @@ function Chat() {
 
             if (error) throw error;
 
+            // Создаем объект сообщения
+            const newMessage = {
+                message_id: data.message_id,
+                chat_id: currentChat.chat_id,
+                sender_id: currentUser.id,
+                content: text,
+                date: new Date().toISOString(),
+                sender_username: currentUser.username,
+                sender_avatar: currentUser.avatar
+            };
+
+            // Добавляем сообщение в localStorage
+            addMessage(currentChat.chat_id, newMessage);
+            // Обновляем последнее сообщение
+            setLastMessage(currentChat.chat_id, {
+                content: text,
+                date: new Date().toISOString(),
+                sender_name: currentUser.username
+            });
+
             setText('');
-            // После отправки перезагружаем сообщения
             await loadMessages(0);
             
             setTimeout(() => {

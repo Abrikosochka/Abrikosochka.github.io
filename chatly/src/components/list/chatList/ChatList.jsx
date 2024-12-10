@@ -1,5 +1,5 @@
 import "./chatList.css"
-import { getCurrentUserId, getCurrentUser, getUserChats } from '../../../lib/auth'
+import { getCurrentUserId, getCurrentUser, getUserChats, getAllLastMessages } from '../../../lib/auth'
 import { useChatStore } from '../../../lib/chatStore';
 import { supabase } from "../../../lib/supabaseClient.js";
 import AddUser from './addUser/AddUser';
@@ -13,20 +13,11 @@ const formatDate = (date) => {
     const diff = now - d;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    // Если сообщение отправлено сегодня, показываем только время
-    if (days === 0) {
+    // Если сообщение отправлено сегодня или на этой неделе, показываем только время
+    if (days < 7) {
         return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    // Если вчера
-    else if (days === 1) {
-        return 'вчера';
-    }
-    // Если на этой неделе
-    else if (days < 7) {
-        const options = { weekday: 'short' };
-        return d.toLocaleString('ru-RU', options);
-    }
-    // Иначе показываем дату
+    // Иначе показываем полную дату
     else {
         const options = { day: '2-digit', month: '2-digit', year: '2-digit' };
         return d.toLocaleString('ru-RU', options);
@@ -40,7 +31,7 @@ function ChatList() {
     const [addMode, setAddMode] = useState(false);
     const [inputText, setInputText] = useState("");
     const { setCurrentChat } = useChatStore();
-    const [lastMessages, setLastMessages] = useState({});
+    const [lastMessages, setLastMessages] = useState(getAllLastMessages());
 
     // Функция для загрузки чатов
     const fetchChats = async () => {
@@ -163,6 +154,25 @@ function ChatList() {
             subscription.unsubscribe();
         };
     }, [userId]);
+
+    // Добавьте новый useEffect для отслеживания изменений в localStorage
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setLastMessages(getAllLastMessages());
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        
+        // Также добавим интервал для регулярной проверки
+        const interval = setInterval(() => {
+            setLastMessages(getAllLastMessages());
+        }, 1000);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            clearInterval(interval);
+        };
+    }, []);
 
     return (
         <div className="chatList">
