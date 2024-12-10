@@ -114,8 +114,16 @@ export function setLastMessage(chatId, message) {
     localStorage.setItem(LAST_MESSAGES_KEY, JSON.stringify(lastMessages));
     
     // Создаем и диспатчим событие для оповещения об изменениях
-    const event = new Event('storage');
+    const event = new Event('lastMessagesUpdated');
     window.dispatchEvent(event);
+
+    // Также диспатчим событие storage для других вкладок
+    const storageEvent = new StorageEvent('storage', {
+        key: LAST_MESSAGES_KEY,
+        newValue: JSON.stringify(lastMessages),
+        url: window.location.href
+    });
+    window.dispatchEvent(storageEvent);
 }
 
 // Получение всех последних сообщений

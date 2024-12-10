@@ -304,3 +304,30 @@
 .chat .top .user:hover {
     background-color: rgba(0, 0, 0, 0.05);
 }
+
+.bottom.blocked {
+    background-color: rgba(231, 76, 60, 0.1);
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-top: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.blocked-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #e74c3c;
+    font-size: 14px;
+    text-align: center;
+    margin: 0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: rgba(231, 76, 60, 0.05);
+}
+
+.blocked-message::before {
+    content: "🚫";
+    font-size: 18px;
+}

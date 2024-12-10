@@ -6,6 +6,21 @@ import { useUserStore } from "../../lib/userStore";
 import { supabase } from "../../lib/supabaseClient";
 import { getChatMessages, setChatMessages, addMessage, setLastMessage } from "../../lib/auth";
 import ChatSettings from './ChatSetting/ChatSettings';
+import ErrorMessage from '../ErrorMessage/ErrorMessage';
+
+const checkSupabaseConnection = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('count')
+            .limit(1);
+            
+        return !error;
+    } catch (error) {
+        console.error('Ошибка проверки подключения:', error);
+        return false;
+    }
+};
 
 function Chat() {
     const [open, setOpen] = useState(false);
@@ -15,6 +30,7 @@ function Chat() {
     const [offset, setOffset] = useState(0);
     const [allMessagesLoaded, setAllMessagesLoaded] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [error, setError] = useState(null);
 
     const limit = 20;
     const endRef = useRef(null);
@@ -33,32 +49,86 @@ function Chat() {
         }
     };
 
-    // Загрузка сообщений
-    const loadMessages = async (offsetValue = 0) => {
+    // Добавляем функцию для повторных попыток загрузки
+    const loadMessagesWithRetry = async (offsetValue = 0, retries = 3) => {
         if (!currentChat) return;
 
-        try {
-            setLoading(true);
-            
-            const { data, error } = await supabase.rpc('get_chat_messages', {
-                chat_id_param: currentChat.chat_id,
-                limit_param: limit,
-                offset_param: offsetValue
-            });
+        // Проверяем подключение перед загрузкой
+        const isConnected = await checkSupabaseConnection();
+        if (!isConnected) {
+            console.error('Нет подключения к Supabase');
+            alert('Проблема с подключением к серверу. Проверьте интернет-соединение.');
+            return;
+        }
 
-            if (error) {
-                console.error('Ошибка загрузки сообщений:', error);
-                return;
+        for (let i = 0; i < retries; i++) {
+            try {
+                setLoading(true);
+                
+                // Увеличиваем timeout для запроса
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 5000)
+                );
+                
+                const fetchPromise = supabase
+                    .from('messages')
+                    .select(`
+                        *,
+                        users:sender_id (
+                            username,
+                            avatar
+                        )
+                    `)
+                    .eq('chat_id', currentChat.chat_id)
+                    .order('date', { ascending: true });
+
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                const { data, error } = response;
+
+                if (error) throw error;
+
+                if (data) {
+                    const formattedMessages = data.map(msg => ({
+                        message_id: msg.id,
+                        chat_id: msg.chat_id,
+                        sender_id: msg.sender_id,
+                        content: msg.content,
+                        date: msg.date,
+                        sender_username: msg.users?.username,
+                        sender_avatar: msg.users?.avatar
+                    }));
+
+                    setMessages(formattedMessages);
+                    setChatMessages(currentChat.chat_id, formattedMessages);
+
+                    if (formattedMessages.length > 0) {
+                        const lastMsg = formattedMessages[formattedMessages.length - 1];
+                        setLastMessage(currentChat.chat_id, {
+                            content: lastMsg.content,
+                            date: lastMsg.date,
+                            sender_name: lastMsg.sender_username
+                        });
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.error(`Попытка ${i + 1}/${retries} загрузки сообщений не удалась:`, error);
+                
+                // Проверяем тип ошибки
+                if (error.message === 'Timeout') {
+                    console.log('Превышено время ожидания запроса');
+                }
+                
+                if (i === retries - 1) {
+                    console.error('Все попытки загрузки сообщений исчерпаны');
+                    alert('Не удалось загрузить сообщения. Попробуйте обновить страницу.');
+                } else {
+                    // Увеличиваем время ожидания между попытками
+                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+                }
+            } finally {
+                setLoading(false);
             }
-
-            if (data && Array.isArray(data)) {
-                setMessages(data);
-            }
-
-        } catch (error) {
-            console.error('Ошибка при загрузке сообщений:', error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -70,7 +140,7 @@ function Chat() {
                                 prevChatRef.current.chat_id !== currentChat.chat_id;
             
             if (chatIdChanged) {
-                loadMessages(0);
+                loadMessagesWithRetry(0);
                 prevChatRef.current = currentChat;
             }
         }
@@ -80,7 +150,7 @@ function Chat() {
     const handleScroll = async () => {
         const { scrollTop } = topRef.current;
         if (scrollTop === 0 && !loading && !allMessagesLoaded) {
-            await loadMessages(offset);
+            await loadMessagesWithRetry(offset);
         }
     };
 
@@ -93,67 +163,121 @@ function Chat() {
         if (!text.trim() || !currentChat) return;
 
         try {
+            // Проверяем блокировку перед отправкой
+            const isBlocked = currentChat.members?.[currentUser.id]?.blocked_user;
+            if (isBlocked) {
+                setError('Вы не можете отправлять сообщения в этот чат');
+                return;
+            }
+
+            // Сохраняем текст сообщения и очищаем поле ввода
+            const messageText = text.trim();
+            setText('');
+
             const { data, error } = await supabase.rpc('add_message', {
                 p_chat_id: parseInt(currentChat.chat_id),
                 p_sender_id: parseInt(currentUser.id),
-                p_content: text,
+                p_content: messageText,
                 p_media: null
             });
 
-            if (error) throw error;
+            if (error) {
+                throw error;
+            }
 
-            // Создаем объект сообщения
-            const newMessage = {
-                message_id: data.message_id,
-                chat_id: currentChat.chat_id,
-                sender_id: currentUser.id,
-                content: text,
-                date: new Date().toISOString(),
-                sender_username: currentUser.username,
-                sender_avatar: currentUser.avatar
-            };
-
-            // Добавляем сообщение в localStorage
-            addMessage(currentChat.chat_id, newMessage);
-            // Обновляем последнее сообщение
-            setLastMessage(currentChat.chat_id, {
-                content: text,
-                date: new Date().toISOString(),
-                sender_name: currentUser.username
-            });
-
-            setText('');
-            await loadMessages(0);
-            
+            // Прокручиваем к последнему сообщению
             setTimeout(() => {
                 endRef.current?.scrollIntoView({ behavior: "smooth" });
             }, 100);
 
         } catch (error) {
             console.error('Ошибка отправки сообщения:', error);
-            toast.error('Ошибка при отправке сообщения');
+            setText(text);
+            
+            if (error.message && error.message.includes('Вы заблокированы в этом чате')) {
+                setError('Вы не можете отправлять сообщения в этот чат');
+            } else {
+                setError('Ошибка при отправке сообщения');
+            }
         }
     };
 
-    // Подписка на новые сообщения
+    // Обновляем useEffect для подписки на изменения
     useEffect(() => {
         if (!currentChat) return;
 
-        const subscription = supabase
-            .channel(`chat:${currentChat.chat_id}`)
-            .on('postgres_changes', {
+        console.log('Подписываемся на изменения чата:', currentChat.chat_id);
+
+        // Загружаем начальные сообщения
+        loadMessagesWithRetry(0);
+
+        const channelA = supabase.channel('any').on(
+            'postgres_changes',
+            {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
-                filter: `chat_id=eq.${currentChat.chat_id}`
-            }, () => {
-                // При получении нового сообщения просто перезагружаем все сообщения
-                loadMessages(0);
-            })
-            .subscribe();
+                filter: `chat_id=eq.${currentChat.chat_id}`,
+            },
+            async (payload) => {
+                console.log('Новое сообщение:', payload);
+                
+                try {
+                    // Получаем данные отправителя
+                    const { data: userData, error: userError } = await supabase
+                        .from('users')
+                        .select('username, avatar')
+                        .eq('id', payload.new.sender_id)
+                        .single();
 
+                    if (userError) throw userError;
+
+                    // Добавляем новое сообщение к существующим
+                    const newMessage = {
+                        message_id: payload.new.id,
+                        chat_id: payload.new.chat_id,
+                        sender_id: payload.new.sender_id,
+                        content: payload.new.content,
+                        date: payload.new.date,
+                        sender_username: userData.username,
+                        sender_avatar: userData.avatar || "/avatar.png" // Добавляем дефолтную аватарку
+                    };
+
+                    // Обновляем состояние и localStorage
+                    setMessages(prevMessages => {
+                        const updatedMessages = [...prevMessages, newMessage];
+                        setChatMessages(currentChat.chat_id, updatedMessages);
+                        return updatedMessages;
+                    });
+
+                    // Обновляем последнее сообщение
+                    setLastMessage(currentChat.chat_id, {
+                        content: newMessage.content,
+                        date: newMessage.date,
+                        sender_name: userData.username
+                    });
+
+                    // Прокручиваем к новому сообщению если это не наше сообщение
+                    if (newMessage.sender_id !== parseInt(currentUser.id)) {
+                        setTimeout(() => {
+                            endRef.current?.scrollIntoView({ behavior: "smooth" });
+                        }, 100);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при обработке нового сообщения:', error);
+                }
+            }
+        );
+
+        // Подписываемся на канал
+        channelA.subscribe((status) => {
+            console.log(`Статус подписки для чата ${currentChat.chat_id}:`, status);
+        });
+
+        // Отписываемся при размонтировании компонента или смене чата
         return () => {
-            subscription.unsubscribe();
+            console.log('Отписываемся от чата:', currentChat.chat_id);
+            channelA.unsubscribe();
         };
     }, [currentChat]);
 
@@ -204,7 +328,7 @@ function Chat() {
             setOffset(0);
             setAllMessagesLoaded(false);
             setMessages([]); 
-            await loadMessages(0);
+            await loadMessagesWithRetry(0);
             
             // Прокручиваем к последнему сообщению
             setTimeout(() => {
@@ -215,12 +339,68 @@ function Chat() {
         }
     };
 
+    const renderChatInput = () => {
+        // Проверяем, заблокирован ли пользователь
+        const isBlocked = currentChat.members?.[currentUser.id]?.blocked_user;
+
+        if (isBlocked) {
+            return (
+                <div className="bottom blocked">
+                    <p className="blocked-message">
+                        Вы не можете отправлять сообщения в этот чат
+                    </p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="bottom">
+                <input 
+                    type="text" 
+                    placeholder="Введите сообщение..." 
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isBlocked}
+                />
+                <div className="emoji">
+                    <img 
+                        src="/emoji.png"
+                        alt="emoji" 
+                        onClick={() => !isBlocked && setOpen(!open)}
+                        style={{ opacity: isBlocked ? 0.5 : 1 }}
+                    />
+                    <div className="picker">
+                        <EmojiPicker 
+                            open={open && !isBlocked} 
+                            onEmojiClick={handleEmoji}
+                        />
+                    </div>
+                </div>
+                <button 
+                    className="sendButton" 
+                    onClick={handleSend}
+                    disabled={isBlocked}
+                    style={{ opacity: isBlocked ? 0.5 : 1 }}
+                >
+                    Отправить
+                </button>
+            </div>
+        );
+    };
+
     if (!currentChat) {
         return <div className="chat no-chat">Выберите чат для начала общения</div>;
     }
 
     return (
         <div className="chat">
+            {error && (
+                <ErrorMessage 
+                    message={error} 
+                    onClose={() => setError(null)}
+                />
+            )}
             <div className="top">
                 <div className="user" onClick={() => setShowSettings(true)}>
                     <img 
@@ -271,34 +451,7 @@ function Chat() {
                 <div ref={endRef}></div>
             </div>
 
-            <div className="bottom">
-                <input 
-                    type="text" 
-                    placeholder="Type a message..." 
-                    value={text}
-                    onChange={e => setText(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                />
-                <div className="emoji">
-                    <img 
-                        src="/emoji.png"
-                        alt="emoji" 
-                        onClick={() => setOpen(!open)}
-                    />
-                    <div className="picker">
-                        <EmojiPicker 
-                            open={open} 
-                            onEmojiClick={handleEmoji}
-                        />
-                    </div>
-                </div>
-                <button 
-                    className="sendButton" 
-                    onClick={handleSend}
-                >
-                    Send
-                </button>
-            </div>
+            {renderChatInput()}
         </div>
     );
 }

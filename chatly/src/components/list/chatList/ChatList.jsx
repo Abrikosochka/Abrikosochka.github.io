@@ -76,27 +76,57 @@ function ChatList() {
         }
     };
 
-    // Обновляем useEffect для отслеживания изменений
+    // Обновляем useEffect для отслеживания изменений в localStorage
     useEffect(() => {
         const handleStorageChange = (e) => {
-            if (e.key === 'userChats') {
-                setUpdateTrigger(prev => prev + 1);
+            // Проверяем, изменились ли последние сообщения
+            if (e.key === LAST_MESSAGES_KEY) { // Используем константу из auth.js
+                console.log('Обновление последних сообщений из localStorage');
                 setLastMessages(getAllLastMessages());
             }
         };
 
+        // Подписываемся на изменения в localStorage
         window.addEventListener('storage', handleStorageChange);
-        
-        // Добавляем обработчик пользовательского события
-        window.addEventListener('chatsUpdated', () => {
-            setUpdateTrigger(prev => prev + 1);
-        });
 
+        // Подписываемся на изменения в messages через Supabase
+        const channel = supabase
+            .channel('chat_updates')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages'
+                },
+                () => {
+                    // Немедленно обновляем последние сообщения из localStorage
+                    const messages = getAllLastMessages();
+                    setLastMessages(messages);
+                }
+            )
+            .subscribe();
+
+        // Начальная загрузка последних сообщений
+        setLastMessages(getAllLastMessages());
+
+        // Очистка при размонтировании
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('chatsUpdated', () => {
-                setUpdateTrigger(prev => prev + 1);
-            });
+            channel.unsubscribe();
+        };
+    }, []);
+
+    // Добавляем эффект для обновления lastMessages при изменении в том же окне
+    useEffect(() => {
+        const handleCustomEvent = () => {
+            setLastMessages(getAllLastMessages());
+        };
+
+        window.addEventListener('lastMessagesUpdated', handleCustomEvent);
+
+        return () => {
+            window.removeEventListener('lastMessagesUpdated', handleCustomEvent);
         };
     }, []);
 
@@ -127,12 +157,18 @@ function ChatList() {
         setCurrentChat(chat);
     };
 
+    // Обновляем renderChatItem для корректного отображения последнего сообщения
     const renderChatItem = (chat) => {
-        const lastMessage = lastMessages[chat.chat_id] || chat.last_message;
-        const messageText = lastMessage ? (
+        // Получаем последнее сообщение из localStorage
+        const lastMessage = lastMessages[chat.chat_id];
+        
+        // Если нет сообщения в localStorage, используем сообщение из чата
+        const messageToShow = lastMessage || chat.last_message;
+        
+        const messageText = messageToShow ? (
             chat.is_group ? 
-                `${lastMessage.sender_name}: ${lastMessage.content}` :
-                lastMessage.content
+                `${messageToShow.sender_name}: ${messageToShow.content}` :
+                messageToShow.content
         ) : 'Нет сообщений';
 
         return (
@@ -149,32 +185,14 @@ function ChatList() {
                     <span>{chat.displayName}</span>
                     <p>{messageText}</p>
                 </div>
-                {lastMessage && (
+                {messageToShow && (
                     <span className="message-time">
-                        {formatDate(lastMessage.date)}
+                        {formatDate(messageToShow.date)}
                     </span>
                 )}
             </div>
         );
     };
-
-    useEffect(() => {
-        const subscription = supabase
-            .channel('public:messages')
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages'
-            }, async () => {
-                // Перезагружаем список чатов
-                await fetchChats();
-            })
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [userId]);
 
     return (
         <div className="chatList">
