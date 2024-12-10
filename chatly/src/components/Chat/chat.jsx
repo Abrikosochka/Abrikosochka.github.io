@@ -23,6 +23,9 @@ function Chat() {
     const { currentUser } = useUserStore();
     const { currentChat } = useChatStore();
 
+    // Добавляем ref для хранения предыдущего значения чата
+    const prevChatRef = useRef();
+
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -62,9 +65,16 @@ function Chat() {
     // Загрузка сообщений при выборе чата
     useEffect(() => {
         if (currentChat) {
-            loadMessages(0);
+            // Проверяем, действительно ли изменился ID чата
+            const chatIdChanged = !prevChatRef.current || 
+                                prevChatRef.current.chat_id !== currentChat.chat_id;
+            
+            if (chatIdChanged) {
+                loadMessages(0);
+                prevChatRef.current = currentChat;
+            }
         }
-    }, [currentChat?.chat_id]);
+    }, [currentChat?.chat_id]); // Следим только за ID чата
 
     // Обработка скролла для подгрузки старых сообщений
     const handleScroll = async () => {

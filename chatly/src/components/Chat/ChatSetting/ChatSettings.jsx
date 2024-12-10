@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { toast } from 'react-toastify';
 import { useChatStore } from '../../../lib/chatStore';
 import './chatSettings.css';
+import { setUserChats, getUserChats } from '../../../lib/auth';
 
 function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
     console.log('Chat Data:', {
@@ -53,7 +54,39 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
                 throw error;
             }
 
-            toast.success('Статус пользователя обновлен');
+            // Получаем обновленные данные чата
+            const { data: chatData } = await supabase.rpc('get_user_chats', {
+                user_id_param: currentUser.id
+            });
+
+            if (chatData) {
+                const updatedChat = chatData.find(c => c.chat_id === chat.chat_id);
+                if (updatedChat) {
+                    // Обновляем только members в текущем чате
+                    const updatedCurrentChat = {
+                        ...chat,
+                        members: updatedChat.members
+                    };
+
+                    // Обновляем чаты в localStorage, сохраняя остальные поля неизменными
+                    const currentChats = getUserChats();
+                    const updatedChats = currentChats.map(c => 
+                        c.chat_id === chat.chat_id ? 
+                        {
+                            ...c,
+                            members: updatedChat.members
+                        } : 
+                        c
+                    );
+                    
+                    setUserChats(updatedChats);
+                    setCurrentChat(updatedCurrentChat);
+                }
+
+                window.dispatchEvent(new Event('chatsUpdated'));
+                toast.success('Статус пользователя обновлен');
+                onUpdate();
+            }
 
         } catch (err) {
             console.error('Ошибка:', err);
@@ -83,29 +116,44 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
 
             if (chatError) throw chatError;
 
-            // Находим обновленный чат
-            const updatedChat = chatData.find(c => c.chat_id === chat.chat_id);
-            if (updatedChat) {
-                const processedChat = {
-                    ...updatedChat,
-                    displayName: updatedChat.chat_name || `Групповой чат ${updatedChat.chat_id}`,
-                    displayImage: updatedChat.chat_picture || "/group-avatar.png",
-                    displayStatus: '',
-                    is_group: updatedChat.is_group,
-                    isAdmin: updatedChat.is_admin,
-                    members: updatedChat.members
-                };
+            if (chatData) {
+                // Обновляем все чаты в localStorage
+                const currentChats = getUserChats();
+                const updatedChats = currentChats.map(c => {
+                    if (c.chat_id === chat.chat_id) {
+                        const updatedChat = chatData.find(newChat => newChat.chat_id === chat.chat_id);
+                        return {
+                            ...updatedChat,
+                            displayName: updatedChat.chat_name || `Групповой чат ${updatedChat.chat_id}`,
+                            displayImage: updatedChat.chat_picture || "/group-avatar.png",
+                            displayStatus: '',
+                            is_group: updatedChat.is_group,
+                            isAdmin: updatedChat.is_admin,
+                            members: updatedChat.members
+                        };
+                    }
+                    return c;
+                });
+
+                // Обновляем localStorage
+                setUserChats(updatedChats);
 
                 // Обновляем текущий чат в store
-                setCurrentChat(processedChat);
-
-                // Обновляем чаты в localStorage
-                const chats = JSON.parse(localStorage.getItem('userChats') || '[]');
-                const chatIndex = chats.findIndex(c => c.chat_id === chat.chat_id);
-                if (chatIndex !== -1) {
-                    chats[chatIndex] = processedChat;
-                    localStorage.setItem('userChats', JSON.stringify(chats));
+                const updatedChat = chatData.find(c => c.chat_id === chat.chat_id);
+                if (updatedChat) {
+                    setCurrentChat({
+                        ...updatedChat,
+                        displayName: updatedChat.chat_name || `Групповой чат ${updatedChat.chat_id}`,
+                        displayImage: updatedChat.chat_picture || "/group-avatar.png",
+                        displayStatus: '',
+                        is_group: updatedChat.is_group,
+                        isAdmin: updatedChat.is_admin,
+                        members: updatedChat.members
+                    });
                 }
+
+                // Генерируем пользовательское событие для обновления ChatList
+                window.dispatchEvent(new Event('chatsUpdated'));
 
                 // Вызываем обновление компонента и показываем уведомление
                 onUpdate();

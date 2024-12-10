@@ -32,6 +32,7 @@ function ChatList() {
     const [inputText, setInputText] = useState("");
     const { setCurrentChat } = useChatStore();
     const [lastMessages, setLastMessages] = useState(getAllLastMessages());
+    const [updateTrigger, setUpdateTrigger] = useState(0);
 
     // Функция для загрузки чатов
     const fetchChats = async () => {
@@ -75,18 +76,38 @@ function ChatList() {
         }
     };
 
-    // Загружаем чаты при монтировании и при изменении userId
+    // Обновляем useEffect для отслеживания изменений
     useEffect(() => {
-        fetchChats();
-    }, [userId]);
+        const handleStorageChange = (e) => {
+            if (e.key === 'userChats') {
+                setUpdateTrigger(prev => prev + 1);
+                setLastMessages(getAllLastMessages());
+            }
+        };
 
-    // Исправляем слушатель для обновления чатов
+        window.addEventListener('storage', handleStorageChange);
+        
+        // Добавляем обработчик пользовательского события
+        window.addEventListener('chatsUpdated', () => {
+            setUpdateTrigger(prev => prev + 1);
+        });
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('chatsUpdated', () => {
+                setUpdateTrigger(prev => prev + 1);
+            });
+        };
+    }, []);
+
+    // Добавляем useEffect для обновления чатов при изменении updateTrigger
     useEffect(() => {
         const chats = getUserChats();
         if (chats && chats.length > 0) {
             setProcessedChats(chats);
         }
-    }, [getUserChats]); // Убираем вызов функции, оставляем только ссылку
+        fetchChats();
+    }, [userId, updateTrigger]);
 
     // Фильтрация обработанных чатов
     const filteredChats = processedChats.filter(chat => {
@@ -154,25 +175,6 @@ function ChatList() {
             subscription.unsubscribe();
         };
     }, [userId]);
-
-    // Добавьте новый useEffect для отслеживания изменений в localStorage
-    useEffect(() => {
-        const handleStorageChange = () => {
-            setLastMessages(getAllLastMessages());
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-        
-        // Также добавим интервал для регулярной проверки
-        const interval = setInterval(() => {
-            setLastMessages(getAllLastMessages());
-        }, 1000);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            clearInterval(interval);
-        };
-    }, []);
 
     return (
         <div className="chatList">
