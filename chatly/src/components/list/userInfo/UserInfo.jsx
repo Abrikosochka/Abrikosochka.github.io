@@ -2,15 +2,17 @@ import "./userInfo.css"
 import { getCurrentUser, clearCurrentUser } from '../../../lib/auth'
 import { useState } from 'react';
 import UpdateUser from './updateUser/UpdateUser';
+import AdminPage from './AdminPage/AdminPage';
 
 const Userinfo = () => {
     const currentUser = getCurrentUser();
     const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+    const [isAdminOpen, setIsAdminOpen] = useState(false);
 
     const handleLogout = () => {
-        clearCurrentUser(); // Очищаем данные пользователя
-        localStorage.clear(); // Очищаем весь localStorage
-        window.location.reload(); // Перезагружаем страницу
+        clearCurrentUser();
+        localStorage.clear();
+        window.location.reload();
     };
 
     return (
@@ -23,6 +25,14 @@ const Userinfo = () => {
                 </div>
             </div>
             <div className="icons">
+                {currentUser?.is_admin && (
+                    <img 
+                        src="/admin.png" 
+                        alt="admin" 
+                        onClick={() => setIsAdminOpen(true)}
+                        title="Админ панель"
+                    />
+                )}
                 <img 
                     src="/edit.png" 
                     alt="edit" 
@@ -50,6 +60,23 @@ const Userinfo = () => {
                             </button>
                         </div>
                         <UpdateUser onClose={() => setIsUpdateOpen(false)} />
+                    </div>
+                </div>
+            )}
+
+            {isAdminOpen && currentUser?.is_admin && (
+                <div className="modal-overlay" onClick={() => setIsAdminOpen(false)}>
+                    <div className="modal-content admin-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Админ панель</h3>
+                            <button 
+                                className="close-button" 
+                                onClick={() => setIsAdminOpen(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <AdminPage onClose={() => setIsAdminOpen(false)} />
                     </div>
                 </div>
             )}

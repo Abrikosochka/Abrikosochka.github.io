@@ -142,3 +142,29 @@
         transform: translateY(0);
     }
 }
+
+.admin-modal {
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-content.admin-modal {
+    background-color: rgba(17, 25, 40, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 800px;
+}
+
+.icons img[alt="admin"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.icons img[alt="admin"]:hover {
+    transform: scale(1.1);
+}

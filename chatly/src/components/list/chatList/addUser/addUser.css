@@ -205,13 +205,105 @@ button.selected {
 }
 
 .search-results {
-    margin-top: 15px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     max-height: 300px;
     overflow-y: auto;
 }
 
+.user-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background-color: rgba(184, 56, 196, 0.15);
+    border-radius: 10px;
+    border: 1px solid rgba(184, 56, 196, 0.2);
+    transition: all 0.2s;
+}
+
+.user-item:hover {
+    transform: translateX(5px);
+    background-color: rgba(184, 56, 196, 0.2);
+}
+
+.user-item img {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(184, 56, 196, 0.3);
+}
+
+.user-item .info {
+    flex: 1;
+}
+
+.user-item .info h4 {
+    margin: 0;
+    color: white;
+    font-size: 1em;
+}
+
+.user-item .info p {
+    margin: 5px 0 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9em;
+}
+
+.add-button {
+    padding: 8px 15px;
+    background-color: #b838c4;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.add-button:hover {
+    background-color: #c44fd0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(184, 56, 196, 0.3);
+}
+
+.add-button:disabled {
+    background-color: rgba(184, 56, 196, 0.3);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(184, 56, 196, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 1em;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: rgba(184, 56, 196, 0.8);
+    box-shadow: 0 0 10px rgba(184, 56, 196, 0.2);
+}
+
+.no-results {
+    text-align: center;
+    padding: 20px;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+/* Стилизация скроллбара */
 .search-results::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .search-results::-webkit-scrollbar-track {
@@ -219,8 +311,12 @@ button.selected {
 }
 
 .search-results::-webkit-scrollbar-thumb {
-    background-color: rgba(89, 46, 131, 0.5);
-    border-radius: 4px;
+    background-color: rgba(184, 56, 196, 0.3);
+    border-radius: 3px;
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(184, 56, 196, 0.5);
 }
 
 .error-message {
