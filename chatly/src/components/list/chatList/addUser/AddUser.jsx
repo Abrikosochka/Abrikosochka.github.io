@@ -1,7 +1,8 @@
 import "./addUser.css"
 import { useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
-import { getCurrentUserId } from "../../../../lib/auth";
+import { getCurrentUserId, addChat } from "../../../../lib/auth";
+import { useChatStore } from "../../../../lib/chatStore";
 
 function AddUser({ onClose }) {
     const [searchResults, setSearchResults] = useState([]);
@@ -9,6 +10,7 @@ function AddUser({ onClose }) {
     const [groupName, setGroupName] = useState("");
     const [error, setError] = useState("");
     const currentUserId = getCurrentUserId();
+    const { setCurrentChat } = useChatStore();
 
     const handleModalClick = (e) => {
         e.stopPropagation(); // Предотвращаем всплытие клика
@@ -67,7 +69,6 @@ function AddUser({ onClose }) {
         try {
             const isGroup = selectedUsers.length > 1;
             
-            // Проверяем существование личного чата только если это не групповой чат
             if (!isGroup) {
                 const chatExists = await checkPersonalChatExists(selectedUsers[0].id);
                 if (chatExists) {
@@ -78,7 +79,7 @@ function AddUser({ onClose }) {
 
             const memberIds = selectedUsers.map(user => user.id);
 
-            const { data, error } = await supabase
+            const { data: newChat, error } = await supabase
                 .rpc('create_chat_with_members', {
                     is_group_chat: isGroup,
                     chat_name: isGroup ? groupName : null,
@@ -88,11 +89,33 @@ function AddUser({ onClose }) {
 
             if (error) throw error;
 
-            // Очищаем состояние после успешного создания
+            const { data: chatData, error: chatError } = await supabase.rpc('get_user_chats', {
+                user_id_param: currentUserId
+            });
+
+            if (chatError) throw chatError;
+
+            const createdChat = chatData.find(chat => chat.chat_id === newChat.chat_id);
+            
+            if (createdChat) {
+                const processedChat = {
+                    ...createdChat,
+                    displayName: createdChat.chat_name || 
+                        (isGroup ? `Групповой чат ${createdChat.chat_id}` : selectedUsers[0].username),
+                    displayImage: createdChat.chat_picture || 
+                        (isGroup ? "/group-avatar.png" : selectedUsers[0].avatar || "/avatar.png"),
+                    displayStatus: '',
+                    is_group: isGroup
+                };
+
+                addChat(processedChat);
+                setCurrentChat(processedChat);
+            }
+
             setSelectedUsers([]);
             setGroupName("");
             setSearchResults([]);
-            onClose(); // Закрываем модальное окно после успешного создания
+            onClose();
 
         } catch (err) {
             console.error("Ошибка создания чата:", err);

@@ -1,10 +1,9 @@
 import "./chatList.css"
-import { getCurrentUserId, getCurrentUser, getLastMessage } from '../../../lib/auth'
-import { setUserChats } from "../../../lib/auth";
-import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient.js";
+import { getCurrentUserId, getCurrentUser, getUserChats } from '../../../lib/auth'
 import { useChatStore } from '../../../lib/chatStore';
+import { supabase } from "../../../lib/supabaseClient.js";
 import AddUser from './addUser/AddUser';
+import { useEffect, useState } from "react";
 
 const formatDate = (date) => {
     const d = new Date(date);
@@ -43,71 +42,60 @@ function ChatList() {
     const { setCurrentChat } = useChatStore();
     const [lastMessages, setLastMessages] = useState({});
 
-    // Получение чатов
-    useEffect(() => {
-        const fetchChats = async () => {
-            if (!userId) {
-                console.error('userId отсутствует');
+    // Функция для загрузки чатов
+    const fetchChats = async () => {
+        try {
+            const { data, error } = await supabase.rpc('get_user_chats', {
+                user_id_param: parseInt(userId)
+            });
+
+            if (error) {
+                console.error('Ошибка Supabase:', error);
                 return;
             }
 
-            try {
-                console.log('Fetching chats for user:', userId);
-                const { data, error } = await supabase.rpc('get_user_chats', {
-                    user_id_param: parseInt(userId)
-                });
-
-                if (error) {
-                    console.error('Ошибка Supabase:', error);
-                    return;
-                }
-
-                if (!data) {
-                    console.error('Данные не получены');
-                    return;
-                }
-
-                console.log('Received raw data from supabase:', data);
-
+            if (data) {
                 const validChats = data
                     .filter(chat => chat)
                     .map(chat => {
-                        console.log('Processing chat:', chat);
-                        const members = chat.members || {};
-                        
                         if (chat.is_group) {
-                            const processedChat = {
+                            return {
                                 ...chat,
                                 displayName: chat.chat_name || `Групповой чат ${chat.chat_id}`,
                                 displayImage: chat.chat_picture || "/group-avatar.png",
                                 displayStatus: ''
                             };
-                            console.log('Processed group chat:', processedChat);
-                            return processedChat;
                         } else {
-                            const otherUser = Object.values(members).find(member => member.id !== parseInt(userId)) || {};
-                            const isBlocked = currentUser?.blocked?.includes(otherUser.id);
-                            
-                            const processedChat = {
+                            const otherUser = Object.values(chat.members || {})
+                                .find(member => member.id !== parseInt(userId));
+                            return {
                                 ...chat,
-                                displayName: isBlocked ? "User" : otherUser.username || 'Неизвестный пользователь',
-                                displayImage: isBlocked ? "/avatar.png" : otherUser.avatar || "/avatar.png",
-                                displayStatus: otherUser.status || 'Нет статуса'
+                                displayName: otherUser?.username || 'Неизвестный пользователь',
+                                displayImage: otherUser?.avatar || "/avatar.png",
+                                displayStatus: otherUser?.status || 'Нет статуса'
                             };
-                            console.log('Processed personal chat:', processedChat);
-                            return processedChat;
                         }
                     });
 
-                console.log('Final processed chats:', validChats);
                 setProcessedChats(validChats);
-            } catch (error) {
-                console.error('Ошибка при получении чатов:', error);
             }
-        };
+        } catch (error) {
+            console.error('Ошибка при получении чатов:', error);
+        }
+    };
 
+    // Загружаем чаты при монтировании и при изменении userId
+    useEffect(() => {
         fetchChats();
-    }, [userId]); // Зависимость только от userId
+    }, [userId]);
+
+    // Исправляем слушатель для обновления чатов
+    useEffect(() => {
+        const chats = getUserChats();
+        if (chats && chats.length > 0) {
+            setProcessedChats(chats);
+        }
+    }, [getUserChats]); // Убираем вызов функции, оставляем только ссылку
 
     // Фильтрация обработанных чатов
     const filteredChats = processedChats.filter(chat => {
@@ -189,14 +177,17 @@ function ChatList() {
                     />
                 </div>
                 <img 
-                    src={addMode ? "../../../../public/minus.png" : "../../../../public/plus.png"} 
+                    src={addMode ? "/minus.png" : "/plus.png"} 
                     onClick={() => setAddMode(!addMode)} 
                     alt="add friend" 
                     className="add"
                 />
             </div>
 
-            {addMode && <AddUser onClose={() => setAddMode(false)} />}
+            {addMode && <AddUser onClose={() => {
+                setAddMode(false);
+                fetchChats(); // Обновляем список чатов после закрытия окна добавления
+            }} />}
 
             <div className="chat-items">
                 {filteredChats.length > 0 ? (
