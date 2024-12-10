@@ -158,6 +158,24 @@ function ChatList() {
         );
     };
 
+    useEffect(() => {
+        const subscription = supabase
+            .channel('public:messages')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages'
+            }, async () => {
+                // Перезагружаем список чатов
+                await fetchChats();
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [userId]);
+
     return (
         <div className="chatList">
             <div className="search">

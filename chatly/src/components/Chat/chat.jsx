@@ -37,13 +37,11 @@ function Chat() {
         try {
             setLoading(true);
             
-            // Получаем сообщения из базы данных
-            const { data, error } = await supabase
-                .rpc('get_chat_messages', {
-                    chat_id_param: currentChat.chat_id,
-                    limit_param: limit,
-                    offset_param: offsetValue
-                });
+            const { data, error } = await supabase.rpc('get_chat_messages', {
+                chat_id_param: currentChat.chat_id,
+                limit_param: limit,
+                offset_param: offsetValue
+            });
 
             if (error) {
                 console.error('Ошибка загрузки сообщений:', error);
@@ -51,21 +49,9 @@ function Chat() {
             }
 
             if (data && Array.isArray(data)) {
-                // Если это первая загрузка (offset = 0), заменяем все сообщения
-                if (offsetValue === 0) {
-                    setMessages(data);
-                    setChatMessages(currentChat.chat_id, data);
-                } else {
-                    // Иначе добавляем новые сообщения к существующим
-                    const newMessages = [...data, ...messages];
-                    setMessages(newMessages);
-                    setChatMessages(currentChat.chat_id, newMessages);
-                }
-
-                // Проверяем, есть ли еще сообщения для загрузки
-                setAllMessagesLoaded(data.length < limit);
-                setOffset(offsetValue + data.length);
+                setMessages(data);
             }
+
         } catch (error) {
             console.error('Ошибка при загрузке сообщений:', error);
         } finally {
@@ -73,18 +59,14 @@ function Chat() {
         }
     };
 
-    // Обновляем useEffect для загрузки сообщений при выборе чата
+    // Загрузка сообщений при выборе чата
     useEffect(() => {
         if (currentChat) {
-            console.log('Загрузка сообщений для чата:', currentChat.chat_id);
-            setOffset(0);
-            setAllMessagesLoaded(false);
-            setMessages([]); // Очищаем сообщения перед загрузкой новых
             loadMessages(0);
         }
-    }, [currentChat?.chat_id]); // Зависимость от chat_id вместо всего объекта currentChat
+    }, [currentChat?.chat_id]);
 
-    // Обработка скролла
+    // Обработка скролла для подгрузки старых сообщений
     const handleScroll = async () => {
         const { scrollTop } = topRef.current;
         if (scrollTop === 0 && !loading && !allMessagesLoaded) {
@@ -101,54 +83,26 @@ function Chat() {
         if (!text.trim() || !currentChat) return;
 
         try {
-            const { data, error } = await supabase.rpc('add_message', {
+            const { error } = await supabase.rpc('add_message', {
                 p_chat_id: parseInt(currentChat.chat_id),
                 p_sender_id: parseInt(currentUser.id),
                 p_content: text,
                 p_media: null
             });
 
-            if (error) {
-                console.error('Ошибка базы данных:', error);
-                throw error;
-            }
+            if (error) throw error;
 
-            if (data && data[0]) {
-                const newMessage = {
-                    message_id: data[0].id,
-                    chat_id: data[0].chat_id,
-                    sender_id: data[0].sender_id,
-                    content: data[0].content,
-                    date: data[0].date,
-                    is_edit: data[0].is_edit,
-                    is_read: data[0].is_read,
-                    sender_username: currentUser.username,
-                    sender_avatar: currentUser.avatar
-                };
+            setText('');
+            // После отправки перезагружаем сообщения
+            await loadMessages(0);
+            
+            setTimeout(() => {
+                endRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 100);
 
-                // Обновляем состояние и localStorage
-                setMessages(prev => [...prev, newMessage]);
-                const updatedMessages = addMessage(currentChat.chat_id, newMessage);
-                setChatMessages(currentChat.chat_id, updatedMessages);
-
-                // Обновляем последнее сообщение
-                setLastMessage(currentChat.chat_id, {
-                    content: text,
-                    sender_id: currentUser.id,
-                    sender_name: currentUser.username,
-                    date: data[0].date,
-                    sender_avatar: currentUser.avatar
-                });
-
-                setText('');
-                
-                setTimeout(() => {
-                    endRef.current?.scrollIntoView({ behavior: "smooth" });
-                }, 100);
-            }
         } catch (error) {
             console.error('Ошибка отправки сообщения:', error);
-            alert(error.message || 'Ошибка при отправке сообщения');
+            toast.error('Ошибка при отправке сообщения');
         }
     };
 
@@ -163,32 +117,9 @@ function Chat() {
                 schema: 'public',
                 table: 'messages',
                 filter: `chat_id=eq.${currentChat.chat_id}`
-            }, (payload) => {
-                const newMessage = {
-                    message_id: payload.new.id,
-                    chat_id: payload.new.chat_id,
-                    sender_id: payload.new.sender_id,
-                    content: payload.new.content,
-                    date: payload.new.date,
-                    is_edit: payload.new.is_edit,
-                    is_read: payload.new.is_read,
-                    sender_username: payload.new.sender_username,
-                    sender_avatar: payload.new.sender_avatar
-                };
-                const updatedMessages = addMessage(currentChat.chat_id, newMessage);
-                setMessages(updatedMessages);
-
-                // Обновляем последнее сообщение
-                setLastMessage(currentChat.chat_id, {
-                    content: newMessage.content,
-                    sender_id: newMessage.sender_id,
-                    sender_name: newMessage.sender_username,
-                    date: newMessage.date,
-                    media: newMessage.media,
-                    sender_avatar: newMessage.sender_avatar
-                });
-
-                endRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, () => {
+                // При получении нового сообщения просто перезагружаем все сообщения
+                loadMessages(0);
             })
             .subscribe();
 
