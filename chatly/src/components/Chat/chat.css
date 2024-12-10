@@ -292,3 +292,15 @@
 .message.own .image-container {
     margin-left: auto;
 }
+
+/* Добавьте стили для кликабельной области */
+.chat .top .user {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.chat .top .user:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}

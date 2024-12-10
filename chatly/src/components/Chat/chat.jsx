@@ -5,6 +5,7 @@ import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
 import { supabase } from "../../lib/supabaseClient";
 import { getChatMessages, setChatMessages, addMessage, setLastMessage } from "../../lib/auth";
+import ChatSettings from './ChatSetting/ChatSettings';
 
 function Chat() {
     const [open, setOpen] = useState(false);
@@ -13,6 +14,7 @@ function Chat() {
     const [loading, setLoading] = useState(true);
     const [offset, setOffset] = useState(0);
     const [allMessagesLoaded, setAllMessagesLoaded] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     const limit = 20;
     const endRef = useRef(null);
@@ -236,6 +238,23 @@ function Chat() {
         checkConnection();
     }, []);
 
+    const handleChatUpdate = async () => {
+        try {
+            // Перезагружаем сообщения
+            setOffset(0);
+            setAllMessagesLoaded(false);
+            setMessages([]); 
+            await loadMessages(0);
+            
+            // Прокручиваем к последнему сообщению
+            setTimeout(() => {
+                endRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 100);
+        } catch (error) {
+            console.error('Ошибка при обновлении чата:', error);
+        }
+    };
+
     if (!currentChat) {
         return <div className="chat no-chat">Выберите чат для начала общения</div>;
     }
@@ -243,7 +262,7 @@ function Chat() {
     return (
         <div className="chat">
             <div className="top">
-                <div className="user">
+                <div className="user" onClick={() => setShowSettings(true)}>
                     <img 
                         src={currentChat.displayImage} 
                         alt="avatar"
@@ -254,6 +273,15 @@ function Chat() {
                     </div>
                 </div>
             </div>
+
+            {showSettings && (
+                <ChatSettings
+                    chat={currentChat}
+                    currentUser={currentUser}
+                    onClose={() => setShowSettings(false)}
+                    onUpdate={handleChatUpdate}
+                />
+            )}
 
             <div className="center" ref={topRef} onScroll={handleScroll}>
                 {loading && <div className="loading">Загрузка сообщений...</div>}
