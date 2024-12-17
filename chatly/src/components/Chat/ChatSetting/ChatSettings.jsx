@@ -18,7 +18,6 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
 
     const [loading, setLoading] = useState(false);
     const [chatName, setChatName] = useState(chat.chat_name || '');
-    const [chatPicture, setChatPicture] = useState(null);
     const [blockedUsers, setBlockedUsers] = useState(
         chat.members ? 
         Object.values(chat.members).reduce((acc, member) => {
@@ -28,6 +27,52 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
         {}
     );
     const { setCurrentChat } = useChatStore();
+    const [chatPicture, setChatPicture] = useState({
+        file: null,
+        url: ""
+    });
+
+    const handleChatPicture = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            console.log('File selected:', {
+                name: file.name,
+                type: file.type,
+                size: file.size
+            });
+    
+            setChatPicture({
+                file: file,
+                url: URL.createObjectURL(file)
+            });
+        }
+    };
+
+    const uploadChatPicture = async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `chat-${chat.chat_id}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+    
+        try {
+            const { error: uploadError } = await supabase.storage
+                .from('chat_pictures') // Bucket name
+                .upload(filePath, file);
+    
+            if (uploadError) throw uploadError;
+    
+            const { data: { publicUrl } } = supabase.storage
+                .from('chat_pictures')
+                .getPublicUrl(filePath);
+    
+            return publicUrl; // Возвращаем публичный URL загруженного изображения
+        } catch (error) {
+            console.error('Image upload failed:', error);
+            toast.error("Не удалось загрузить изображение");
+            return null;
+        }
+    };
+
+    
 
     // Определяем, является ли текущий пользователь админом
     const isCurrentUserAdmin = chat.is_admin === true;
@@ -100,11 +145,26 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
         e.preventDefault();
         try {
             setLoading(true);
+
+            let imageUrl = chat.chat_picture; // Текущее изображение чата
+
+            // Если пользователь загрузил новое изображение, загружаем его в Supabase
+            if (chatPicture.file) {
+                const uploadedUrl = await uploadChatPicture(chatPicture.file);
+                if (uploadedUrl) {
+                    imageUrl = uploadedUrl; // Обновляем URL изображения
+                } else {
+                    throw new Error("Failed to upload image");
+                }
+            }
+
+            console.log(imageUrl);
+
             const { data, error } = await supabase.rpc('update_group_chat', {
                 p_chat_id: chat.chat_id,
                 p_admin_id: currentUser.id,
                 p_chat_name: chatName || null,
-                p_chat_picture: chatPicture || null
+                p_chat_picture: imageUrl || null
             });
 
             if (error) throw error;
@@ -194,7 +254,7 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
                                 <input
                                     type="file"
                                     accept="image/*"
-                                    onChange={(e) => setChatPicture(e.target.files[0])}
+                                    onChange={handleChatPicture}
                                 />
                             </label>
                             <span className="file-name">

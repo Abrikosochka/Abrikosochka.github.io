@@ -121,7 +121,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 300px;
+    max-width: 200px;
 }
 
 .message-time {
@@ -153,4 +153,18 @@
 
 .chat-items::-webkit-scrollbar-thumb:hover {
     background-color: rgba(184, 56, 196, 0.5);
+}
+
+.delete-button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: red;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+.delete-button:hover {
+    transform: scale(1.1);
+    color: darkred;
 }

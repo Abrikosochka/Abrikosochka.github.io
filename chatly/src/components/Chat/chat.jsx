@@ -132,6 +132,41 @@ function Chat() {
         }
     };
 
+    const loadInitialMessages = async () => {
+        if (!currentChat) return;
+
+        try {
+            setLoading(true);
+            
+            const { data, error } = await supabase.rpc('get_chat_messages', {
+                chat_id_param: parseInt(currentChat.chat_id),
+                limit_param: limit,
+                offset_param: 0
+            });
+
+            if (error) throw error;
+
+            if (data) {
+                const formattedMessages = data.map(msg => ({
+                    message_id: msg.message_id,
+                    chat_id: msg.chat_id,
+                    sender_id: msg.sender_id,
+                    content: msg.content,
+                    date: msg.date,
+                    sender_username: msg.sender_username,
+                    sender_avatar: msg.sender_avatar
+                }));
+
+                setMessages(formattedMessages);
+                setChatMessages(currentChat.chat_id, formattedMessages);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки начальных сообщений:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Загрузка сообщений при выборе чата
     useEffect(() => {
         if (currentChat) {
@@ -140,7 +175,7 @@ function Chat() {
                                 prevChatRef.current.chat_id !== currentChat.chat_id;
             
             if (chatIdChanged) {
-                loadMessagesWithRetry(0);
+                loadInitialMessages();
                 prevChatRef.current = currentChat;
             }
         }
@@ -184,6 +219,13 @@ function Chat() {
             if (error) {
                 throw error;
             }
+
+            // Обновляем последнее сообщение
+            setLastMessage(currentChat.chat_id, {
+                content: messageText,
+                date: new Date().toISOString(), // Используйте актуальную дату
+                sender_name: currentUser.username // Убедитесь, что у вас есть имя отправителя
+            });
 
             // Прокручиваем к последнему сообщению
             setTimeout(() => {

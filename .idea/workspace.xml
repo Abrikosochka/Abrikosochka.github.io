@@ -5,17 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7af9ee77-d0b9-462a-87f0-8e8253f7489c" name="Changes" comment="new_files">
-      <change afterPath="$PROJECT_DIR$/chatly/src/components/Chat/chat.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/public/avatar.png" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/public/avatar.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/public/bg.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/public/bg.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/components/list/chatList/ChatList.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/components/list/chatList/ChatList.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/components/list/chatList/chatList.css" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/components/list/chatList/chatList.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/lib/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/lib/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chatly/src/lib/supabaseClient.js" beforeDir="false" afterPath="$PROJECT_DIR$/chatly/src/lib/supabaseClient.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,6 +103,9 @@
       <workItem from="1733134466211" duration="4887000" />
       <workItem from="1733312871462" duration="2432000" />
       <workItem from="1733646654920" duration="184000" />
+      <workItem from="1733869663741" duration="1221000" />
+      <workItem from="1733897935589" duration="1212000" />
+      <workItem from="1734020111448" duration="36000" />
     </task>
     <task id="LOCAL-00001" summary="start_vite_app">
       <option name="closed" value="true" />

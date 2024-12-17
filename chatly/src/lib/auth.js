@@ -4,7 +4,7 @@ const USER_KEY = 'userId';
 const USER_DATA_KEY = 'userData';
 const CHATS_KEY = 'userChats';
 const MESSAGES_KEY = 'chatMessages';
-const LAST_MESSAGES_KEY = 'lastMessages';
+export const LAST_MESSAGES_KEY = 'lastMessages';
 
 let currentUserId = localStorage.getItem(USER_KEY);
 let currentUserData = JSON.parse(localStorage.getItem(USER_DATA_KEY));
@@ -116,19 +116,12 @@ export function setLastMessage(chatId, message) {
     // Создаем и диспатчим событие для оповещения об изменениях
     const event = new Event('lastMessagesUpdated');
     window.dispatchEvent(event);
-
-    // Также диспатчим событие storage для других вкладок
-    const storageEvent = new StorageEvent('storage', {
-        key: LAST_MESSAGES_KEY,
-        newValue: JSON.stringify(lastMessages),
-        url: window.location.href
-    });
-    window.dispatchEvent(storageEvent);
 }
 
 // Получение всех последних сообщений
 export function getAllLastMessages() {
-    return JSON.parse(localStorage.getItem(LAST_MESSAGES_KEY) || '{}');
+    const lastMessages = localStorage.getItem(LAST_MESSAGES_KEY);
+    return lastMessages ? JSON.parse(lastMessages) : {};
 }
 
 // Добавим новую функцию для обновления данных пользователя
@@ -153,4 +146,8 @@ export const updateCurrentUserData = async (userId) => {
         console.error('Ошибка при обновлении данных пользователя:', err);
         return null;
     }
+};
+
+export const setLastMessages = (messages) => {
+    localStorage.setItem(LAST_MESSAGES_KEY, JSON.stringify(messages));
 };

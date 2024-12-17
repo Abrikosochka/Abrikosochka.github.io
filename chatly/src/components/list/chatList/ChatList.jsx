@@ -1,5 +1,5 @@
 import "./chatList.css"
-import { getCurrentUserId, getCurrentUser, getUserChats, getAllLastMessages } from '../../../lib/auth'
+import { LAST_MESSAGES_KEY, getCurrentUserId, getCurrentUser, getUserChats, getAllLastMessages } from '../../../lib/auth'
 import { useChatStore } from '../../../lib/chatStore';
 import { supabase } from "../../../lib/supabaseClient.js";
 import AddUser from './addUser/AddUser';
@@ -80,7 +80,7 @@ function ChatList() {
     useEffect(() => {
         const handleStorageChange = (e) => {
             // Проверяем, изменились ли последние сообщения
-            if (e.key === LAST_MESSAGES_KEY) { // Используем константу из auth.js
+            if (e.key === LAST_MESSAGES_KEY) {
                 console.log('Обновление последних сообщений из localStorage');
                 setLastMessages(getAllLastMessages());
             }
@@ -90,7 +90,7 @@ function ChatList() {
         window.addEventListener('storage', handleStorageChange);
 
         // Подписываемся на изменения в messages через Supabase
-        const channel = supabase
+        const channelMessages = supabase
             .channel('chat_updates')
             .on(
                 'postgres_changes',
@@ -99,10 +99,112 @@ function ChatList() {
                     schema: 'public',
                     table: 'messages'
                 },
+                (payload) => {
+                    console.log('Новое сообщение добавлено:', payload); // Для отладки
+                    const lastMessages = getAllLastMessages();
+                    const chatId = payload.new.chat_id; // Получаем ID чата из payload
+                    const newMessage = {
+                        content: payload.new.content,
+                        sender_name: payload.new.sender_name,
+                        date: payload.new.date
+                    };
+
+                    // Обновляем состояние lastMessages
+                    lastMessages[chatId] = newMessage; // Обновляем последнее сообщение для соответствующего чата
+                    setLastMessages(lastMessages); // Устанавливаем обновленные последние сообщения
+
+                    // Обновляем состояние processedChats
+                    setProcessedChats(prevChats => {
+                        return prevChats.map(chat => {
+                            if (chat.chat_id === chatId) {
+                                return { ...chat, last_message: newMessage }; // Обновляем последнее сообщение для соответствующего чата
+                            }
+                            return chat;
+                        });
+                    });
+                }
+            )
+            .subscribe();
+
+            const channelUsers = supabase
+        .channel('user_updates')
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE', // Подписка на обновления
+                schema: 'public',
+                table: 'users'
+            },
+            (payload) => {
+                console.log('Пользователь был обновлен:', payload); // Для отладки
+                const updatedUserId = payload.new.id; // Получаем ID обновленного пользователя
+                const updatedUserData = payload.new; // Получаем новые данные пользователя
+
+                // Обновляем состояние пользователей
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === updatedUserId) {
+                            return { ...user, ...updatedUserData }; // Обновляем данные пользователя
+                        }
+                        return user;
+                    });
+                });
+            }
+        )
+        .subscribe();
+
+        // Подписываемся на изменения в таблице Chats
+        const channelChats = supabase
+            .channel('chat_updates')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'chats'
+                },
                 () => {
-                    // Немедленно обновляем последние сообщения из localStorage
-                    const messages = getAllLastMessages();
-                    setLastMessages(messages);
+                    console.log('Чат был создан или обновлен');
+                    fetchChats(); // Обновляем список чатов при изменении
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'chats'
+                },
+                (payload) => {
+                    console.log('Чат был обновлен:', payload);
+                    const updatedChatId = payload.new.id;
+                    const updatedChatName = payload.new.chat_name;
+
+                    setProcessedChats(prevChats => {
+                        return prevChats.map(chat => {
+                            if (chat.chat_id === updatedChatId) {
+                                return { ...chat, displayName: updatedChatName };
+                            }
+                            return chat;
+                        });
+                    });
+
+                    fetchChats();
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'DELETE', schema: 'public', table: 'chats' },
+                (payload) => {
+                    console.log('Чат был удален:', payload);
+                    const deletedChatId = payload.old.id;
+    
+                    // Удаляем чат из состояния
+                    setProcessedChats(prevChats =>
+                        prevChats.filter(chat => chat.chat_id !== deletedChatId)
+                    );
+
+                    fetchChats();
                 }
             )
             .subscribe();
@@ -113,7 +215,8 @@ function ChatList() {
         // Очистка при размонтировании
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            channel.unsubscribe();
+            channelMessages.unsubscribe(); // Отписка от канала сообщений
+            channelChats.unsubscribe(); // Отписка от канала чатов
         };
     }, []);
 
@@ -157,6 +260,27 @@ function ChatList() {
         setCurrentChat(chat);
     };
 
+    const handleDeleteChat = async (chatId) => {
+        console.log(userId);
+        try {
+            const { error } = await supabase.rpc('delete_user_from_chat', {
+                p_chat_id: chatId,
+                p_user_id: userId
+            });
+    
+            if (error) {
+                console.error('Ошибка при удалении пользователя из чата:', error.message);
+                alert('Не удалось удалить пользователя из чата');
+            } else {
+                console.log('Пользователь успешно удален из чата');
+            }
+        } catch (error) {
+            console.error('Ошибка при вызове функции удаления пользователя из чата:', error);
+        }
+        window.location.reload();
+    };    
+    
+
     // Обновляем renderChatItem для корректного отображения последнего сообщения
     const renderChatItem = (chat) => {
         // Получаем последнее сообщение из localStorage
@@ -190,6 +314,16 @@ function ChatList() {
                         {formatDate(messageToShow.date)}
                     </span>
                 )}
+
+                {/* Кнопка удаления чата */}
+                <button
+                    className="delete-button"
+                    onClick={() => handleDeleteChat(chat.chat_id)}
+                    title="Удалить чат"
+                    style={{ marginLeft: "10px", cursor: "pointer", color: "#973880" }}
+                >
+                    ✖
+                </button>
             </div>
         );
     };
