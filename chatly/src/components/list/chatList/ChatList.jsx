@@ -4,6 +4,7 @@ import { useChatStore } from '../../../lib/chatStore';
 import { supabase } from "../../../lib/supabaseClient.js";
 import AddUser from './addUser/AddUser';
 import { useEffect, useState } from "react";
+import { useUserStore } from '../../../lib/userStore';
 
 const formatDate = (date) => {
     const d = new Date(date);
@@ -194,7 +195,7 @@ function ChatList() {
             )
             .on(
                 'postgres_changes',
-                { event: 'DELETE', schema: 'public', table: 'chats' },
+                { event: 'DELETE', schema: 'public', table: 'chat_members' },
                 (payload) => {
                     console.log('Чат был удален:', payload);
                     const deletedChatId = payload.old.id;
@@ -248,16 +249,59 @@ function ChatList() {
         return chat.displayName.toLowerCase().includes(inputText.toLowerCase());
     });
 
-    const handleChatClick = (chat) => {
-        console.log('Clicked chat:', chat);
+    const handleChatClick = async (chat) => {
+        console.log('=== Handle Chat Click ===');
+        console.log('Initial chat:', chat);
         
         if (!chat || !chat.chat_id) {
             console.error('Invalid chat data:', chat);
             return;
         }
 
-        // Просто устанавливаем текущий чат
-        setCurrentChat(chat);
+        try {
+            console.log('User ID:', userId);
+            const { data, error } = await supabase.rpc('get_user_chats', {
+                user_id_param: parseInt(userId)
+            });
+
+            if (error) throw error;
+
+            console.log('Received chat data:', data);
+
+            const updatedChat = data.find(c => c.chat_id === chat.chat_id);
+            if (updatedChat) {
+                const members = {};
+                if (updatedChat.members) {
+                    Object.entries(updatedChat.members).forEach(([key, value]) => {
+                        members[key.toString()] = value;
+                    });
+                }
+                
+                console.log('Processed members:', members);
+                
+                const formattedChat = {
+                    ...updatedChat,
+                    members,
+                    displayName: updatedChat.is_group 
+                        ? (updatedChat.chat_name || `Групповой чат ${updatedChat.chat_id}`)
+                        : (Object.values(members)
+                            .find(member => member.id.toString() !== userId.toString())?.username || 'Неизвестный пользователь'),
+                    displayImage: updatedChat.is_group 
+                        ? (updatedChat.chat_picture || "/group-avatar.png")
+                        : (Object.values(members)
+                            .find(member => member.id.toString() !== userId.toString())?.avatar || "/avatar.png"),
+                    displayStatus: updatedChat.is_group 
+                        ? ''
+                        : (Object.values(members)
+                            .find(member => member.id.toString() !== userId.toString())?.status || 'Нет статуса')
+                };
+                
+                console.log('Final formatted chat:', formattedChat);
+                setCurrentChat(formattedChat);
+            }
+        } catch (error) {
+            console.error('Error in handleChatClick:', error);
+        }
     };
 
     const handleDeleteChat = async (chatId) => {
@@ -277,7 +321,6 @@ function ChatList() {
         } catch (error) {
             console.error('Ошибка при вызове функции удаления пользователя из чата:', error);
         }
-        window.location.reload();
     };    
     
 

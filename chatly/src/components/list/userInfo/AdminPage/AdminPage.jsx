@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { toast } from 'react-toastify';
 import './adminPage.css';
+import { getCurrentUser } from '../../../../lib/auth';
 
 function AdminPage({ onClose }) {
     const [users, setUsers] = useState([]);
@@ -9,6 +10,7 @@ function AdminPage({ onClose }) {
     const [editingUser, setEditingUser] = useState(null);
     const [newEmail, setNewEmail] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const currentUser = getCurrentUser();
 
     const fetchUsers = async () => {
         try {
@@ -87,6 +89,9 @@ function AdminPage({ onClose }) {
                                     <h3>{user.username}</h3>
                                     <p>{user.email}</p>
                                     <span className="status">{user.status}</span>
+                                    {user.id === currentUser.id && (
+                                        <span className="current-user-badge">Это вы</span>
+                                    )}
                                 </div>
                             </div>
                             <div className="actions">
@@ -96,12 +101,14 @@ function AdminPage({ onClose }) {
                                 >
                                     Изменить
                                 </button>
-                                <button 
-                                    onClick={() => handleDelete(user.id)}
-                                    className="delete-btn"
-                                >
-                                    Удалить
-                                </button>
+                                {user.id !== currentUser.id && (
+                                    <button 
+                                        onClick={() => handleDelete(user.id)}
+                                        className="delete-btn"
+                                    >
+                                        Удалить
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}

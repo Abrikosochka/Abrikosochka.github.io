@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getChatMessages, setChatMessages, addMessage, setLastMessage } from "../../lib/auth";
 import ChatSettings from './ChatSetting/ChatSettings';
 import ErrorMessage from '../ErrorMessage/ErrorMessage';
+import { getCurrentUser } from '../../lib/auth';
 
 const checkSupabaseConnection = async () => {
     try {
@@ -23,10 +24,34 @@ const checkSupabaseConnection = async () => {
 };
 
 function Chat() {
-    const [open, setOpen] = useState(false);
-    const [text, setText] = useState("");
+    console.log('Chat component initialized');
+    
+    const { currentUser } = useUserStore();
+    const { currentChat } = useChatStore();
+
+    // Добавляем подробные логи
+    console.log('=== Chat Component Debug ===');
+    console.log('currentUser:', currentUser);
+    console.log('currentChat:', currentChat);
+
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // Добавим useEffect для отслеживания изменений currentChat
+    useEffect(() => {
+        console.log('=== Chat Updated ===');
+        console.log('Updated currentChat:', currentChat);
+        console.log('Updated currentUser:', currentUser);
+        
+        if (currentChat && currentUser) {
+            console.log('Chat members:', currentChat.members);
+            console.log('User ID:', currentUser.id);
+            console.log('Members contains user:', currentChat.members?.[currentUser.id.toString()]);
+        }
+    }, [currentChat, currentUser]);
+
+    const [open, setOpen] = useState(false);
+    const [text, setText] = useState("");
     const [offset, setOffset] = useState(0);
     const [allMessagesLoaded, setAllMessagesLoaded] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -35,9 +60,6 @@ function Chat() {
     const limit = 20;
     const endRef = useRef(null);
     const topRef = useRef(null);
-
-    const { currentUser } = useUserStore();
-    const { currentChat } = useChatStore();
 
     // Добавляем ref для хранения предыдущего значения чата
     const prevChatRef = useRef();
@@ -382,18 +404,35 @@ function Chat() {
     };
 
     const renderChatInput = () => {
-        // Проверяем, заблокирован ли пользователь
-        const isBlocked = currentChat.members?.[currentUser.id]?.blocked_user;
+        console.log('=== Rendering Chat Input ===');
+        console.log('Current Chat State:', {
+            currentChat,
+            currentUser,
+            hasMembers: Boolean(currentChat?.members),
+            membersContent: currentChat?.members
+        });
 
-        if (isBlocked) {
+        if (!currentChat || !currentChat.members || !currentUser) {
+            console.log('Missing required data for chat input');
             return (
-                <div className="bottom blocked">
-                    <p className="blocked-message">
-                        Вы не можете отправлять сообщения в этот чат
-                    </p>
+                <div className="bottom">
+                    <input 
+                        type="text" 
+                        placeholder="Загрузка..." 
+                        disabled={true}
+                    />
                 </div>
             );
         }
+
+        const currentUserId = currentUser.id.toString();
+        const isBlocked = currentChat.members?.[currentUserId]?.blocked_user;
+
+        console.log('Chat Input State:', {
+            currentUserId,
+            members: currentChat.members,
+            isBlocked
+        });
 
         return (
             <div className="bottom">
@@ -431,7 +470,7 @@ function Chat() {
         );
     };
 
-    if (!currentChat) {
+    if (!currentChat || !currentUser) {
         return <div className="chat no-chat">Выберите чат для начала общения</div>;
     }
 

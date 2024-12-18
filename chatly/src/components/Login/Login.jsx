@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { setCurrentUser} from '../../lib/auth.js';
+import { setCurrentUser } from '../../lib/auth.js';
+import { useUserStore } from '../../lib/userStore';
 import "./login.css";
 import { supabase } from "../../lib/supabaseClient.js";
 import { toast } from 'react-toastify';
@@ -7,6 +8,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import PropTypes from 'prop-types';
 
 function Login({ onLoginSuccess }) {
+
+    const { setCurrentUser: setStoreUser } = useUserStore();
 
     const [avatar, setAvatar] = useState({
         file: null,
@@ -70,6 +73,7 @@ function Login({ onLoginSuccess }) {
 
                 // Сохраняем данные
                 setCurrentUser(userId, user);
+                setStoreUser(user);
                 onLoginSuccess(userId);
                 toast.success('Welcome!');
             } else {

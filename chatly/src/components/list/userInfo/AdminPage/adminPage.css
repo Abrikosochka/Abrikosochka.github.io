@@ -269,4 +269,18 @@
 
 .users-list::-webkit-scrollbar-thumb:hover {
     background-color: rgba(89, 46, 131, 0.7);
+}
+
+.current-user-badge {
+    display: inline-block;
+    background-color: #973880;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.user-card:has(.current-user-badge) {
+    border: 2px solid #973880;
 } 

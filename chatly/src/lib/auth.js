@@ -25,7 +25,7 @@ export function getCurrentUserId() {
 
 // Получение данных пользователя
 export function getCurrentUser() {
-     return currentUserData;
+    return currentUserData;
 }
 
 // Очистка данных при выходе

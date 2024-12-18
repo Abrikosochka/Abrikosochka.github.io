@@ -2,114 +2,112 @@ import "./updateUser.css"
 import { useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
 import { getCurrentUser, updateCurrentUserData } from "../../../../lib/auth";
+import { useUserStore } from "../../../../lib/userStore";
 import { toast } from 'react-toastify';
 
 function UpdateUser({ onClose }) {
     const [loading, setLoading] = useState(false);
     const currentUser = getCurrentUser();
+    const { setCurrentUser: setStoreUser } = useUserStore();
+    const [formData, setFormData] = useState({
+        username: '',
+        status: '',
+        avatar: {
+            file: null,
+            url: ""
+        }
+    });
 
-    const checkConnection = async () => {
-        try {
-            const { data, error } = await supabase.from('users').select('count').limit(1);
-            if (error) throw error;
-            return true;
-        } catch (err) {
-            console.error('Ошибка подключения к Supabase:', err);
-            return false;
+    const handleAvatarChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            console.log('File selected:', {
+                name: file.name,
+                type: file.type,
+                size: file.size
+            });
+
+            setFormData(prev => ({
+                ...prev,
+                avatar: {
+                    file: file,
+                    url: URL.createObjectURL(file)
+                }
+            }));
         }
     };
 
-    const handleEditName = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const newUsername = formData.get("username");
+    const uploadAvatar = async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentUser.username}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-        if (!newUsername) {
-            toast.warn("Введите имя пользователя");
-            return;
+        try {
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('Avatar upload failed:', error);
+            throw new Error("Не удалось загрузить аватар");
         }
+    };
 
-        if (newUsername.length > 25) {
-            toast.warn("Имя пользователя слишком длинное");
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        
+        // Проверяем, есть ли какие-либо изменения
+        if (!formData.username && !formData.status && !formData.avatar.file) {
+            toast.warn("Нет изменений для сохранения");
             return;
         }
 
         try {
             setLoading(true);
-            console.log('Начинаем обновление имени пользователя');
-            console.log('Текущий пользователь:', currentUser);
 
-            const params = {
+            let avatarUrl = null;
+            if (formData.avatar.file) {
+                avatarUrl = await uploadAvatar(formData.avatar.file);
+            }
+
+            const { data, error } = await supabase.rpc('update_user_info', {
                 p_user_id: parseInt(currentUser.id),
-                p_username: newUsername
-            };
-            console.log('Параметры запроса:', params);
+                p_username: formData.username || null,
+                p_status: formData.status || null,
+                p_avatar: avatarUrl || null
+            });
 
-            const { data, error } = await supabase.rpc('update_user_info', params);
-
-            if (error) {
-                console.error('Ошибка обновления:', error);
-                throw error;
-            }
-
-            if (!data || data.length === 0) {
-                throw new Error('Нет данных в ответе');
-            }
+            if (error) throw error;
 
             const updatedUserData = await updateCurrentUserData(currentUser.id);
             if (!updatedUserData) {
                 throw new Error('Не удалось обновить данные пользователя');
             }
 
-            toast.success("Имя пользователя успешно обновлено");
+            // Обновляем данные в store
+            setStoreUser(updatedUserData);
+
+            toast.success("Данные успешно обновлены");
             onClose();
-            window.location.reload();
-        } catch (err) {
-            console.error('Полная ошибка:', err);
-            toast.error(err.message || "Ошибка при обновлении имени пользователя");
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    const handleEditStatus = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const newStatus = formData.get("userstatus");
-
-        if (!newStatus) {
-            toast.warn("Введите статус");
-            return;
-        }
-
-        if (newStatus.length > 25) {
-            toast.warn("Статус слишком длинный");
-            return;
-        }
-
-        try {
-            setLoading(true);
-
-            const { data, error } = await supabase.rpc('update_user_info', {
-                p_user_id: parseInt(currentUser.id),
-                p_status: newStatus
-            });
-
-            if (error) throw error;
-
-            if (data && data.length > 0) {
-                const updatedUserData = await updateCurrentUserData(currentUser.id);
-                if (!updatedUserData) {
-                    throw new Error('Не удалось обновить данные пользователя');
-                }
-
-                toast.success("Статус успешно обновлен");
-                onClose();
-                window.location.reload();
-            }
         } catch (err) {
             console.error('Ошибка при обновлении:', err);
-            toast.error("Ошибка при обновлении статуса");
+            toast.error(err.message || "Ошибка при обновлении данных");
         } finally {
             setLoading(false);
         }
@@ -117,28 +115,46 @@ function UpdateUser({ onClose }) {
 
     return (
         <div className="updateUser">
-            <form className="Name" onSubmit={handleEditName}>
+            <form onSubmit={handleUpdate}>
+                <div className="avatar-upload">
+                    <label htmlFor="avatar">
+                        <img 
+                            src={formData.avatar.url || currentUser.avatar || "/avatar.png"} 
+                            alt="avatar" 
+                        />
+                        <span>Изменить аватар</span>
+                    </label>
+                    <input
+                        type="file"
+                        id="avatar"
+                        onChange={handleAvatarChange}
+                        accept="image/*"
+                        style={{ display: "none" }}
+                    />
+                </div>
+
                 <input 
                     type="text" 
                     placeholder="Изменить имя пользователя" 
                     name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
                     disabled={loading}
                 />
-                <button type="submit" disabled={loading}>
-                    {loading ? "Обновление..." : "Изменить"}
-                </button>
-            </form>
-            <form className="Name" onSubmit={handleEditStatus}>
+
                 <input 
                     type="text" 
                     placeholder="Изменить статус" 
-                    name="userstatus"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
                     disabled={loading}
                 />
+
                 <button type="submit" disabled={loading}>
-                    {loading ? "Обновление..." : "Изменить"}
+                    {loading ? "Обновление..." : "Сохранить изменения"}
                 </button>
-            </form>   
+            </form>
         </div>
     );
 }
