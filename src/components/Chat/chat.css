@@ -143,6 +143,7 @@
         border-top: 1px solid #dddddd35;
         gap: 20px;
         margin-top: auto;
+        position: relative;
 
         .icons{
             display: flex;
@@ -340,4 +341,27 @@
 .blocked-message::before {
     content: "🚫";
     font-size: 18px;
+}
+
+.block-message {
+    position: absolute;
+    top: -30px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    background-color: rgba(47, 45, 82, 0.9);
+    color: #ddddf7;
+    padding: 5px;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+.bottom input:disabled {
+    background-color: rgba(47, 45, 82, 0.5);
+    cursor: not-allowed;
+}
+
+.bottom button:disabled {
+    background-color: rgba(151, 56, 128, 0.5);
+    cursor: not-allowed;
 }

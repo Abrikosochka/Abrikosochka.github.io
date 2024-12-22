@@ -220,13 +220,19 @@ function Chat() {
         if (!text.trim() || !currentChat) return;
 
         try {
-            // Проверяем блокировку перед отправкой
-            const isBlocked = currentChat.members?.[currentUser.id]?.blocked_user;
-            if (isBlocked) {
-                setError('Вы не можете отправлять сообщения в этот чат');
-                return;
-            }
+            const currentUserId = currentUser.id.toString();
+            const otherUserId = Object.keys(currentChat.members)
+                .find(id => id !== currentUserId);
+            
+            // Проверяем блокировку в обе стороны
+            const isBlockedByOther = currentChat.members[currentUserId]?.blocked_user;
+            const hasBlockedOther = currentChat.members[otherUserId]?.blocked_user;
+            const isBlocked = isBlockedByOther || hasBlockedOther;
 
+            // Если чат заблокирован, просто выходим из функции
+            if (isBlocked) return;
+
+            console.log(currentChat);
             // Сохраняем текст сообщения и очищаем поле ввода
             const messageText = text.trim();
             setText('');
@@ -249,18 +255,21 @@ function Chat() {
                 sender_name: currentUser.username
             });
 
-            // Прокручиваем к последнему сообщению с увеличенной задержкой
+            // Прокручиваем к последнему сообщению
             setTimeout(() => {
                 endRef.current?.scrollIntoView({ behavior: "smooth" });
             }, 300);
 
         } catch (error) {
-            console.error('Ошибка отправки сообщения:', error);
-            setText(text);
-            
-            if (error.message && error.message.includes('Вы заблокированы в этом чате')) {
-                setError('Вы не можете отправлять сообщения в этот чат');
-            } else {
+            if(error.message === 
+                "Вы заблокированы в этом чате") {
+                console.error('Ошибка отправки сообщения:', error);
+                setText(text);
+                setError('Вы заблокированны в этом чате');
+            }
+            else {
+                console.error('Ошибка отправки сообщения:', error);
+                setText(text);
                 setError('Ошибка при отправке сообщения');
             }
         }
@@ -404,16 +413,7 @@ function Chat() {
     };
 
     const renderChatInput = () => {
-        console.log('=== Rendering Chat Input ===');
-        console.log('Current Chat State:', {
-            currentChat,
-            currentUser,
-            hasMembers: Boolean(currentChat?.members),
-            membersContent: currentChat?.members
-        });
-
         if (!currentChat || !currentChat.members || !currentUser) {
-            console.log('Missing required data for chat input');
             return (
                 <div className="bottom">
                     <input 
@@ -426,19 +426,32 @@ function Chat() {
         }
 
         const currentUserId = currentUser.id.toString();
-        const isBlocked = currentChat.members?.[currentUserId]?.blocked_user;
+        const otherUserId = Object.keys(currentChat.members)
+            .find(id => id !== currentUserId);
+        
+        // Проверяем блокировку в обе стороны
+        const isBlockedByOther = currentChat.members[currentUserId]?.blocked_user;
+        const hasBlockedOther = currentChat.members[otherUserId]?.blocked_user;
+        const isBlocked = isBlockedByOther || hasBlockedOther;
 
-        console.log('Chat Input State:', {
-            currentUserId,
-            members: currentChat.members,
-            isBlocked
-        });
+        // Определяем текст сообщения о блокировке
+        let blockMessage = '';
+        if (isBlockedByOther) {
+            blockMessage = 'Вы заблокированы в этом чате';
+        } else if (hasBlockedOther) {
+            blockMessage = 'Вы заблокировали этого пользователя';
+        }
 
         return (
             <div className="bottom">
+                {isBlocked && (
+                    <div className="block-message">
+                        {blockMessage}
+                    </div>
+                )}
                 <input 
                     type="text" 
-                    placeholder="Введите сообщение..." 
+                    placeholder={isBlocked ? "Отправка сообщений недоступна" : "Введите сообщение..."} 
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyPress={handleKeyPress}
