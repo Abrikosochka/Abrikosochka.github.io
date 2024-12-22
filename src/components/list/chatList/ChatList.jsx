@@ -32,7 +32,7 @@ function ChatList() {
     const [processedChats, setProcessedChats] = useState([]);
     const [addMode, setAddMode] = useState(false);
     const [inputText, setInputText] = useState("");
-    const { setCurrentChat } = useChatStore();
+    const { setCurrentChat, clearCurrentChat } = useChatStore();
     const [lastMessages, setLastMessages] = useState(getAllLastMessages());
     const [updateTrigger, setUpdateTrigger] = useState(0);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -319,8 +319,24 @@ function ChatList() {
                 alert('Не удалось удалить пользователя из чата');
             } else {
                 console.log('Пользователь успешно удален из чата');
+                
+                // Очищаем данные чата из localStorage
+                localStorage.removeItem(`chat_messages_${chatId}`);
+                
+                // Очищаем последнее сообщение чата из localStorage и состояния
+                const lastMessages = getAllLastMessages();
+                delete lastMessages[chatId];
+                localStorage.setItem(LAST_MESSAGES_KEY, JSON.stringify(lastMessages));
+                setLastMessages(lastMessages);
+                
+                // Создаем событие для оповещения других компонентов
+                const event = new Event('lastMessagesUpdated');
+                window.dispatchEvent(event);
+                
+                // Обновляем состояние
                 setShowDeleteModal(false);
                 setChatToDelete(null);
+                clearCurrentChat();
             }
         } catch (error) {
             console.error('Ошибка при вызове функции удаления пользователя из чата:', error);
