@@ -245,14 +245,14 @@ function Chat() {
             // Обновляем последнее сообщение
             setLastMessage(currentChat.chat_id, {
                 content: messageText,
-                date: new Date().toISOString(), // Используйте актуальную дату
-                sender_name: currentUser.username // Убедитесь, что у вас есть имя отправителя
+                date: new Date().toISOString(),
+                sender_name: currentUser.username
             });
 
-            // Прокручиваем к последнему сообщению
+            // Прокручиваем к последнему сообщению с увеличенной задержкой
             setTimeout(() => {
                 endRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 100);
+            }, 300);
 
         } catch (error) {
             console.error('Ошибка отправки сообщения:', error);
@@ -325,7 +325,7 @@ function Chat() {
                     if (newMessage.sender_id !== parseInt(currentUser.id)) {
                         setTimeout(() => {
                             endRef.current?.scrollIntoView({ behavior: "smooth" });
-                        }, 100);
+                        }, 300);
                     }
                 } catch (error) {
                     console.error('Ошибка при обработке нового сообщения:', error);
