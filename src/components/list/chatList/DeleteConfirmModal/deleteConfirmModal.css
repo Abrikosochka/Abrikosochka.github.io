@@ -1,0 +1,68 @@
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.delete-modal {
+    background-color: #2f2d52;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    color: white;
+}
+
+.delete-modal h3 {
+    margin: 0 0 20px 0;
+    text-align: center;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.delete-modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.delete-modal button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 100px;
+}
+
+.cancel-button {
+    background-color: #3e3c61;
+    color: white;
+}
+
+.cancel-button:hover {
+    background-color: #4b4878;
+}
+
+.confirm-button {
+    background-color: #973880;
+    color: white;
+}
+
+.confirm-button:hover {
+    background-color: #ab4292;
+}
+
+.chat-name {
+    margin: -10px 0 20px 0;
+    text-align: center;
+    color: #ddddf7;
+    font-size: 14px;
+    opacity: 0.9;
+} 

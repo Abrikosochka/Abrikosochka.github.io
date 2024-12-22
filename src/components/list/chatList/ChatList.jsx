@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabaseClient.js";
 import AddUser from './addUser/AddUser';
 import { useEffect, useState } from "react";
 import { useUserStore } from '../../../lib/userStore';
+import DeleteConfirmModal from './DeleteConfirmModal/DeleteConfirmModal';
 
 const formatDate = (date) => {
     const d = new Date(date);
@@ -34,6 +35,8 @@ function ChatList() {
     const { setCurrentChat } = useChatStore();
     const [lastMessages, setLastMessages] = useState(getAllLastMessages());
     const [updateTrigger, setUpdateTrigger] = useState(0);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [chatToDelete, setChatToDelete] = useState(null);
 
     // Функция для загрузки чатов
     const fetchChats = async () => {
@@ -305,7 +308,6 @@ function ChatList() {
     };
 
     const handleDeleteChat = async (chatId) => {
-        console.log(userId);
         try {
             const { error } = await supabase.rpc('delete_user_from_chat', {
                 p_chat_id: chatId,
@@ -317,12 +319,19 @@ function ChatList() {
                 alert('Не удалось удалить пользователя из чата');
             } else {
                 console.log('Пользователь успешно удален из чата');
+                setShowDeleteModal(false);
+                setChatToDelete(null);
             }
         } catch (error) {
             console.error('Ошибка при вызове функции удаления пользователя из чата:', error);
         }
-    };    
-    
+    };
+
+    const openDeleteModal = (e, chat) => {
+        e.stopPropagation(); // Предотвращаем открытие чата при клике на кнопку удаления
+        setChatToDelete(chat);
+        setShowDeleteModal(true);
+    };
 
     // Обновляем renderChatItem для корректного отображения последнего сообщения
     const renderChatItem = (chat) => {
@@ -358,10 +367,9 @@ function ChatList() {
                     </span>
                 )}
 
-                {/* Кнопка удаления чата */}
                 <button
                     className="delete-button"
-                    onClick={() => handleDeleteChat(chat.chat_id)}
+                    onClick={(e) => openDeleteModal(e, chat)}
                     title="Удалить чат"
                     style={{ marginLeft: "10px", cursor: "pointer", color: "#973880" }}
                 >
@@ -403,6 +411,17 @@ function ChatList() {
                     <div className="no-chats">Нет доступных чатов</div>
                 )}
             </div>
+
+            {showDeleteModal && chatToDelete && (
+                <DeleteConfirmModal
+                    chatName={chatToDelete.displayName}
+                    onConfirm={() => handleDeleteChat(chatToDelete.chat_id)}
+                    onCancel={() => {
+                        setShowDeleteModal(false);
+                        setChatToDelete(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
