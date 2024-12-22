@@ -483,6 +483,145 @@ function Chat() {
         );
     };
 
+    const [editingMessage, setEditingMessage] = useState(null);
+    const [editText, setEditText] = useState("");
+
+    const handleEdit = (message) => {
+        setEditingMessage(message);
+        setEditText(message.content);
+    };
+
+    const handleDelete = async (messageId) => {
+        try {
+            const { data, error } = await supabase.rpc('delete_messages', {
+                p_message_id: messageId,
+                p_user_id: parseInt(currentUser.id)
+            });
+
+            if (error) throw error;
+            if (!data) {
+                throw new Error('У вас нет прав на удаление этого сообщения');
+            }
+
+            // Обновляем список сообщений
+            setMessages(prevMessages => {
+                const updatedMessages = prevMessages.filter(msg => msg.message_id !== messageId);
+                setChatMessages(currentChat.chat_id, updatedMessages);
+                return updatedMessages;
+            });
+
+            // Если удалили последнее сообщение, обновляем lastMessage
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg && lastMsg.message_id === messageId) {
+                const newLastMsg = messages[messages.length - 2];
+                if (newLastMsg) {
+                    setLastMessage(currentChat.chat_id, {
+                        content: newLastMsg.content,
+                        date: newLastMsg.date,
+                        sender_name: newLastMsg.sender_username
+                    });
+                }
+            }
+
+        } catch (error) {
+            console.error('Ошибка при удалении сообщения:', error);
+            setError('Не удалось удалить сообщение');
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editText.trim()) return;
+
+        try {
+            const { error: editError } = await supabase.rpc('edit_message', {
+                p_message_id: editingMessage.message_id,
+                p_user_id: parseInt(currentUser.id),
+                p_content: editText.trim()
+            });
+
+            if (editError) throw editError;
+
+            // Обновляем сообщение в списке
+            setMessages(prevMessages => {
+                const updatedMessages = prevMessages.map(msg =>
+                    msg.message_id === editingMessage.message_id
+                        ? { ...msg, content: editText.trim(), is_edit: true }
+                        : msg
+                );
+                setChatMessages(currentChat.chat_id, updatedMessages);
+                return updatedMessages;
+            });
+
+            // Обновляем последнее сообщение если редактировали последнее
+            if (messages[messages.length - 1].message_id === editingMessage.message_id) {
+                setLastMessage(currentChat.chat_id, {
+                    content: editText.trim(),
+                    date: editingMessage.date,
+                    sender_name: editingMessage.sender_username
+                });
+            }
+
+            setEditingMessage(null);
+            setEditText("");
+        } catch (error) {
+            console.error('Ошибка при редактировании сообщения:', error);
+            setError('Не удалось редактировать сообщение');
+        }
+    };
+
+    // Обновляем рендер сообщений
+    const renderMessage = (message) => (
+        <div 
+            className={`message ${message.sender_id === parseInt(currentUser.id) ? "own" : ""}`}
+            key={message.message_id}
+        >
+            {message.sender_id !== parseInt(currentUser.id) && (
+                <img 
+                    src={message.sender_avatar || "/avatar.png"}
+                    alt="avatar"
+                    className="user-avatar"
+                />
+            )}
+            <div className="texts">
+                {currentChat.is_group && message.sender_id !== parseInt(currentUser.id) && (
+                    <span className="sender-name">{message.sender_username}</span>
+                )}
+                {editingMessage?.message_id === message.message_id ? (
+                    <div>
+                        <input
+                            type="text"
+                            className="edit-input"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleSaveEdit();
+                                }
+                            }}
+                            autoFocus
+                        />
+                        <div className="message-actions">
+                            <button onClick={handleSaveEdit}>Сохранить</button>
+                            <button onClick={() => setEditingMessage(null)}>Отмена</button>
+                        </div>
+                    </div>
+                ) : (
+                    <p>
+                        {message.content}
+                        {message.is_edit && <span className="edited-mark">(ред.)</span>}
+                    </p>
+                )}
+                <span className="message-time">{formatDate(message.date)}</span>
+            </div>
+            {message.sender_id === parseInt(currentUser.id) && !editingMessage && (
+                <div className="message-actions">
+                    <button onClick={() => handleEdit(message)}>✎</button>
+                    <button onClick={() => handleDelete(message.message_id)}>✖</button>
+                </div>
+            )}
+        </div>
+    );
+
     if (!currentChat || !currentUser) {
         return <div className="chat no-chat">Выберите чат для начала общения</div>;
     }
@@ -520,27 +659,7 @@ function Chat() {
             <div className="center" ref={topRef} onScroll={handleScroll}>
                 {loading && <div className="loading">Загрузка сообщений...</div>}
                 
-                {messages.slice().map((message) => (
-                    <div 
-                        className={`message ${message.sender_id === parseInt(currentUser.id) ? "own" : ""}`}
-                        key={message.message_id}
-                    >
-                        {message.sender_id !== parseInt(currentUser.id) && (
-                            <img 
-                                src={message.sender_avatar || "/avatar.png"}
-                                alt="avatar"
-                                className="user-avatar"
-                            />
-                        )}
-                        <div className="texts">
-                            {currentChat.is_group && message.sender_id !== parseInt(currentUser.id) && (
-                                <span className="sender-name">{message.sender_username}</span>
-                            )}
-                            <p>{message.content}</p>
-                            <span className="message-time">{formatDate(message.date)}</span>
-                        </div>
-                    </div>
-                ))}
+                {messages.slice().map(renderMessage)}
                 
                 <div ref={endRef}></div>
             </div>

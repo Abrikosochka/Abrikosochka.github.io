@@ -71,7 +71,12 @@ export function getChatMessages(chatId) {
 // Сохранение сообщений чата
 export function setChatMessages(chatId, messages) {
     try {
-        localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(messages));
+        // Убедимся, что у каждого сообщения есть поле is_edit
+        const updatedMessages = messages.map(msg => ({
+            ...msg,
+            is_edit: msg.is_edit || false
+        }));
+        localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(updatedMessages));
     } catch (error) {
         console.error('Ошибка при сохранении сообщений:', error);
     }
@@ -86,7 +91,10 @@ export function addMessage(chatId, message) {
         
         if (!messageExists) {
             // Добавляем новое сообщение в конец массива
-            const updatedMessages = [...messages, message];
+            const updatedMessages = [...messages, {
+                ...message,
+                is_edit: message.is_edit || false // Добавляем параметр is_edit
+            }];
             // Сортируем по дате
             updatedMessages.sort((a, b) => new Date(a.date) - new Date(b.date));
             // Сохраняем обновленный список
