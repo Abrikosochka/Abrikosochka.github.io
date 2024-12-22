@@ -77,6 +77,26 @@ function UpdateUser({ onClose }) {
             return;
         }
 
+        // Проверяем имя пользователя
+        if (formData.username) {
+            if (!formData.username.trim()) {
+                toast.warn("Имя пользователя не может быть пустым или содержать только пробелы");
+                return;
+            }
+            if (formData.username.length > 20) {
+                toast.warn("Имя пользователя не должно превышать 20 символов");
+                return;
+            }
+        }
+
+        // Проверяем статус
+        if (formData.status) {
+            if (formData.status.length > 50) {
+                toast.warn("Статус не должен превышать 50 символов");
+                return;
+            }
+        }
+
         try {
             setLoading(true);
 
@@ -87,8 +107,8 @@ function UpdateUser({ onClose }) {
 
             const { data, error } = await supabase.rpc('update_user_info', {
                 p_user_id: parseInt(currentUser.id),
-                p_username: formData.username || null,
-                p_status: formData.status || null,
+                p_username: formData.username?.trim() || null,
+                p_status: formData.status?.trim() || null,
                 p_avatar: avatarUrl || null
             });
 
@@ -99,15 +119,13 @@ function UpdateUser({ onClose }) {
                 throw new Error('Не удалось обновить данные пользователя');
             }
 
-            // Обновляем данные в store
             setStoreUser(updatedUserData);
-
             toast.success("Данные успешно обновлены");
             onClose();
 
         } catch (err) {
             console.error('Ошибка при обновлении:', err);
-            toast.error(err.message || "Ошибка при обновлении данных");
+            toast.error("Произошла ошибка при обновлении данных");
         } finally {
             setLoading(false);
         }

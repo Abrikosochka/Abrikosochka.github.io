@@ -41,15 +41,22 @@ function Login({ onLoginSuccess }) {
             setLoading(true)
 
             const formData = new FormData(e.target)
-
             const {email, password} = Object.fromEntries(formData);
 
             if (!email || !password)
-                return toast.warn("Please enter all fields!");
+                return toast.warn("Пожалуйста, заполните все поля!");
+
+            if (password.length < 6) {
+                return toast.warn("Пароль должен содержать минимум 6 символов");
+            }
+
+            if (password.length > 20) {
+                return toast.warn("Пароль не должен превышать 20 символов");
+            }
 
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailPattern.test(email)) {
-                return toast.warn("Please enter a valid email address");
+                return toast.warn("Пожалуйста, введите корректный email адрес");
             }
 
             const { data: userId, error } = await supabase.rpc('check_user_credentials', {
@@ -106,8 +113,20 @@ function Login({ onLoginSuccess }) {
             const formData = new FormData(e.target);
             const { username, email, password } = Object.fromEntries(formData);
 
-            if (!username || !email || !password) {
-                return toast.warn("Please enter all fields!");
+            if (!username?.trim() || !email?.trim() || !password?.trim()) {
+                return toast.warn("Поля не могут быть пустыми или содержать только пробелы");
+            }
+
+            if (username.length > 20) {
+                return toast.warn("Имя пользователя не должно превышать 20 символов");
+            }
+
+            if (password.length < 6) {
+                return toast.warn("Пароль должен содержать минимум 6 символов");
+            }
+
+            if (password.length > 20) {
+                return toast.warn("Пароль не должен превышать 20 символов");
             }
 
             if (!avatar.file) {

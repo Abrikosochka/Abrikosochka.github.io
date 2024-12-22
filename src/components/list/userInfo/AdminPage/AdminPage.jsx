@@ -38,6 +38,19 @@ function AdminPage({ onClose }) {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
+            if (newEmail?.trim() === '') {
+                return toast.warn("Email не может быть пустым");
+            }
+
+            if (newPassword) {
+                if (newPassword.length < 6) {
+                    return toast.warn("Пароль должен содержать минимум 6 символов");
+                }
+                if (newPassword.length > 20) {
+                    return toast.warn("Пароль не должен превышать 20 символов");
+                }
+            }
+
             const { error } = await supabase.rpc('admin_update_user', {
                 p_user_id: editingUser.id,
                 p_email: newEmail || null,
@@ -46,12 +59,12 @@ function AdminPage({ onClose }) {
 
             if (error) throw error;
 
-            toast.success('Пользователь обновлен');
+            toast.success('Пользователь успешно обновлен');
             setEditingUser(null);
             fetchUsers();
         } catch (err) {
             console.error('Ошибка обновления:', err);
-            toast.error(err.message);
+            toast.error('Произошла ошибка при обновлении пользователя');
         }
     };
 
