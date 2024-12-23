@@ -9,5 +9,5 @@ export default defineConfig({
     host: true, // Разрешаем доступ извне
     strictPort: true, // Если порт 3000 занят, выдаст ошибку вместо выбора другого порта
   },
-  base: "/Abrikosochka.github.io",
+  base: "/Abrikosochka.github.io/",
 })
