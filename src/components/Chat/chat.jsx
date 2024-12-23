@@ -116,6 +116,7 @@ function Chat() {
                         sender_id: msg.sender_id,
                         content: msg.content,
                         date: msg.date,
+                        is_edit: msg.is_edit,
                         sender_username: msg.users?.username,
                         sender_avatar: msg.users?.avatar
                     }));
@@ -175,12 +176,18 @@ function Chat() {
                     sender_id: msg.sender_id,
                     content: msg.content,
                     date: msg.date,
+                    is_edit: msg.is_edit,
                     sender_username: msg.sender_username,
                     sender_avatar: msg.sender_avatar
                 }));
 
                 setMessages(formattedMessages);
                 setChatMessages(currentChat.chat_id, formattedMessages);
+
+                // Прокручиваем к последнему сообщению
+                setTimeout(() => {
+                    endRef.current?.scrollIntoView({ behavior: "smooth" });
+                }, 300);
             }
         } catch (error) {
             console.error('Ошибка загрузки начальных сообщений:', error);
@@ -230,7 +237,7 @@ function Chat() {
             const isBlocked = isBlockedByOther || hasBlockedOther;
 
             // Если чат заблокирован, просто выходим из функции
-            if (isBlocked) return;
+            if (!currentChat.is_group && isBlocked) return;
 
             console.log(currentChat);
             // Сохраняем текст сообщения и очищаем поле ввода
@@ -311,7 +318,8 @@ function Chat() {
                         chat_id: payload.new.chat_id,
                         sender_id: payload.new.sender_id,
                         content: payload.new.content,
-                        date: payload.new.date,
+                        date: payload.new.date, 
+                        is_edit: payload.new.is_edit,
                         sender_username: userData.username,
                         sender_avatar: userData.avatar || "/avatar.png" // Добавляем дефолтную аватарку
                     };
@@ -432,7 +440,7 @@ function Chat() {
         // Проверяем блокировку в обе стороны
         const isBlockedByOther = currentChat.members[currentUserId]?.blocked_user;
         const hasBlockedOther = currentChat.members[otherUserId]?.blocked_user;
-        const isBlocked = isBlockedByOther || hasBlockedOther;
+        const isBlocked = !currentChat.is_group && (isBlockedByOther || hasBlockedOther);
 
         // Определяем текст сообщения о блокировке
         let blockMessage = '';
@@ -474,7 +482,7 @@ function Chat() {
                 <button 
                     className="sendButton" 
                     onClick={handleSend}
-                    disabled={isBlocked}
+                    disabled={!currentChat.is_group && isBlocked}
                     style={{ opacity: isBlocked ? 0.5 : 1 }}
                 >
                     Отправить
@@ -485,10 +493,12 @@ function Chat() {
 
     const [editingMessage, setEditingMessage] = useState(null);
     const [editText, setEditText] = useState("");
+    const [noEditText, setNoEditText] = useState("");
 
     const handleEdit = (message) => {
         setEditingMessage(message);
         setEditText(message.content);
+        setNoEditText(message.content);
     };
 
     const handleDelete = async (messageId) => {
@@ -532,6 +542,8 @@ function Chat() {
     const handleSaveEdit = async () => {
         if (!editText.trim()) return;
 
+        if (editText.trim() === noEditText.trim()) return;
+
         try {
             const { error: editError } = await supabase.rpc('edit_message', {
                 p_message_id: editingMessage.message_id,
@@ -547,7 +559,7 @@ function Chat() {
                     msg.message_id === editingMessage.message_id
                         ? { ...msg, content: editText.trim(), is_edit: true }
                         : msg
-                );
+                );  
                 setChatMessages(currentChat.chat_id, updatedMessages);
                 return updatedMessages;
             });

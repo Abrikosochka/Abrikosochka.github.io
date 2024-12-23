@@ -80,7 +80,7 @@ function AddUser({ onClose }) {
 
             const memberIds = selectedUsers.map(user => user.id);
 
-            if(!groupName.trim()){
+            if(isGroup && !groupName.trim()){
                 toast.error("Вы не ввели название группы");
                 return;
             }
