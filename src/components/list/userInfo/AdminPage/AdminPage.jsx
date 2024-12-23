@@ -41,33 +41,50 @@ function AdminPage({ onClose }) {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            if (newEmail?.trim() === '') {
-                return toast.warn("Email не может быть пустым");
-            }
+            if(newPassword?.trim() || newEmail?.trim()) {
 
-            if (newPassword) {
-                if (newPassword.length < 6) {
-                    return toast.warn("Пароль должен содержать минимум 6 символов");
+                const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!emailPattern.test(newEmail.trim())) {
+                    return toast.warn("Пожалуйста, введите корректный email");
                 }
-                if (newPassword.length > 20) {
-                    return toast.warn("Пароль не должен превышать 20 символов");
+
+                if (newEmail?.trim() === currentUser.email) {
+                    return toast.warn("Введите другой email");
                 }
+
+                if (newPassword?.trim()) {
+                    if (newPassword.length < 6) {
+                        return toast.warn("Пароль должен содержать минимум 6 символов");
+                    }
+                    if (newPassword.length > 20) {
+                        return toast.warn("Пароль не должен превышать 20 символов");
+                    }
+                }
+                
+                const { error } = await supabase.rpc('admin_update_user', {
+                    p_user_id: editingUser.id,
+                    p_email: newEmail || null,
+                    p_password: newPassword || null
+                });
+
+                if (error) throw error;
+
+                toast.success('Пользователь успешно обновлен');
+                setEditingUser(null);
+                fetchUsers();
+                currentUser.email = newEmail;
             }
-
-            const { error } = await supabase.rpc('admin_update_user', {
-                p_user_id: editingUser.id,
-                p_email: newEmail || null,
-                p_password: newPassword || null
-            });
-
-            if (error) throw error;
-
-            toast.success('Пользователь успешно обновлен');
-            setEditingUser(null);
-            fetchUsers();
+            else{
+                toast.warn("Вы не ввели ничего для изменения");
+            }
         } catch (err) {
             console.error('Ошибка обновления:', err);
-            toast.error('Произошла ошибка при обновлении пользователя');
+            if(err.message === "Пользователь с таким email уже существует") {
+                return toast.warn("Пользователь с таким email уже существует");
+            }
+            else {
+                toast.error('Произошла ошибка при обновлении пользователя');
+            }
         }
     };
 

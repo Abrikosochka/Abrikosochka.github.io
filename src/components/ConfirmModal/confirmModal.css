@@ -9,7 +9,6 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    animation: fadeIn 0.2s ease-in-out;
 }
 
 .confirm-modal {
