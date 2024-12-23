@@ -52,8 +52,6 @@ function Chat() {
 
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
-    const [offset, setOffset] = useState(0);
-    const [allMessagesLoaded, setAllMessagesLoaded] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [error, setError] = useState(null);
 
@@ -71,95 +69,77 @@ function Chat() {
         }
     };
 
-    // Добавляем функцию для повторных попыток загрузки
-    const loadMessagesWithRetry = async (offsetValue = 0, retries = 3) => {
-        if (!currentChat) return;
+    const [offset, setOffset] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-        // Проверяем подключение перед загрузкой
-        const isConnected = await checkSupabaseConnection();
-        if (!isConnected) {
-            console.error('Нет подключения к Supabase');
-            alert('Проблема с подключением к серверу. Проверьте интернет-соединение.');
-            return;
-        }
+    // Функция загрузки дополнительных сообщений
+    const loadMoreMessages = async () => {
+        if (!currentChat || isLoadingMore || !hasMore) return;
 
-        for (let i = 0; i < retries; i++) {
-            try {
-                setLoading(true);
-                
-                // Увеличиваем timeout для запроса
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout')), 5000)
-                );
-                
-                const fetchPromise = supabase
-                    .from('messages')
-                    .select(`
-                        *,
-                        users:sender_id (
-                            username,
-                            avatar
-                        )
-                    `)
-                    .eq('chat_id', currentChat.chat_id)
-                    .order('date', { ascending: true });
+        try {
+            setIsLoadingMore(true);
+            const newOffset = offset + limit;
 
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
-                const { data, error } = response;
+            const { data, error } = await supabase.rpc('get_chat_messages', {
+                chat_id_param: parseInt(currentChat.chat_id),
+                limit_param: limit,
+                offset_param: newOffset
+            });
 
-                if (error) throw error;
+            if (error) throw error;
 
-                if (data) {
-                    const formattedMessages = data.map(msg => ({
-                        message_id: msg.id,
-                        chat_id: msg.chat_id,
-                        sender_id: msg.sender_id,
-                        content: msg.content,
-                        date: msg.date,
-                        is_edit: msg.is_edit,
-                        sender_username: msg.users?.username,
-                        sender_avatar: msg.users?.avatar
-                    }));
+            if (data) {
+                const formattedMessages = data.map(msg => ({
+                    message_id: msg.message_id,
+                    chat_id: msg.chat_id,
+                    sender_id: msg.sender_id,
+                    content: msg.content,
+                    date: msg.date,
+                    sender_username: msg.sender_username,
+                    sender_avatar: msg.sender_avatar,
+                    is_edit: msg.is_edit
+                })).reverse();
 
-                    setMessages(formattedMessages);
-                    setChatMessages(currentChat.chat_id, formattedMessages);
-
-                    if (formattedMessages.length > 0) {
-                        const lastMsg = formattedMessages[formattedMessages.length - 1];
-                        setLastMessage(currentChat.chat_id, {
-                            content: lastMsg.content,
-                            date: lastMsg.date,
-                            sender_name: lastMsg.sender_username
-                        });
-                    }
-                    return;
+                if (formattedMessages.length < limit) {
+                    setHasMore(false);
                 }
-            } catch (error) {
-                console.error(`Попытка ${i + 1}/${retries} загрузки сообщений не удалась:`, error);
-                
-                // Проверяем тип ошибки
-                if (error.message === 'Timeout') {
-                    console.log('Превышено время ожидания запроса');
-                }
-                
-                if (i === retries - 1) {
-                    console.error('Все попытки загрузки сообщений исчерпаны');
-                    alert('Не удалось загрузить сообщения. Попробуйте обновить страницу.');
-                } else {
-                    // Увеличиваем время ожидания между попытками
-                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
-                }
-            } finally {
-                setLoading(false);
+
+                setMessages(prevMessages => [...formattedMessages, ...prevMessages]);
+                setOffset(newOffset);
             }
+        } catch (error) {
+            console.error('Ошибка загрузки сообщений:', error);
+            setError('Не удалось загрузить дополнительные сообщения');
+        } finally {
+            setIsLoadingMore(false);
         }
     };
 
+    // Обработчик скролла
+    const handleScroll = (e) => {
+        const { scrollTop } = e.target;
+        if (scrollTop === 0 && !isLoadingMore && hasMore) {
+            // Сохраняем текущую позицию скролла
+            const scrollHeight = e.target.scrollHeight;
+            
+            loadMoreMessages().then(() => {
+                // Восстанавливаем позицию скролла после загрузки
+                const newScrollHeight = e.target.scrollHeight;
+                const scrollDiff = newScrollHeight - scrollHeight;
+                e.target.scrollTop = scrollDiff;
+            });
+        }
+    };
+
+    // Обновляем loadInitialMessages
     const loadInitialMessages = async () => {
         if (!currentChat) return;
 
         try {
             setLoading(true);
+            setOffset(0);
+            setHasMore(true);
             
             const { data, error } = await supabase.rpc('get_chat_messages', {
                 chat_id_param: parseInt(currentChat.chat_id),
@@ -176,47 +156,36 @@ function Chat() {
                     sender_id: msg.sender_id,
                     content: msg.content,
                     date: msg.date,
-                    is_edit: msg.is_edit,
                     sender_username: msg.sender_username,
-                    sender_avatar: msg.sender_avatar
-                }));
+                    sender_avatar: msg.sender_avatar,
+                    is_edit: msg.is_edit
+                })).reverse();
+
+                if (formattedMessages.length < limit) {
+                    setHasMore(false);
+                }
 
                 setMessages(formattedMessages);
                 setChatMessages(currentChat.chat_id, formattedMessages);
 
-                // Прокручиваем к последнему сообщению
                 setTimeout(() => {
                     endRef.current?.scrollIntoView({ behavior: "smooth" });
                 }, 300);
             }
         } catch (error) {
-            console.error('Ошибка загрузки начальных сообщений:', error);
+            console.error('Ошибка загрузки сообщений:', error);
+            setError('Не удалось загрузить сообщения');
         } finally {
             setLoading(false);
         }
     };
 
-    // Загрузка сообщений при выборе чата
+    // Обновляем useEffect для загрузки сообщений
     useEffect(() => {
         if (currentChat) {
-            // Проверяем, действительно ли изменился ID чата
-            const chatIdChanged = !prevChatRef.current || 
-                                prevChatRef.current.chat_id !== currentChat.chat_id;
-            
-            if (chatIdChanged) {
-                loadInitialMessages();
-                prevChatRef.current = currentChat;
-            }
+            loadInitialMessages();
         }
-    }, [currentChat?.chat_id]); // Следим только за ID чата
-
-    // Обработка скролла для подгрузки старых сообщений
-    const handleScroll = async () => {
-        const { scrollTop } = topRef.current;
-        if (scrollTop === 0 && !loading && !allMessagesLoaded) {
-            await loadMessagesWithRetry(offset);
-        }
-    };
+    }, [currentChat?.chat_id]);
 
     const handleEmoji = (e) => {
         setText(text => text + e.emoji);
@@ -289,7 +258,7 @@ function Chat() {
         console.log('Подписываемся на изменения чата:', currentChat.chat_id);
 
         // Загружаем начальные сообщения
-        loadMessagesWithRetry(0);
+        loadInitialMessages();
 
         const channelA = supabase.channel('any').on(
             'postgres_changes',
@@ -678,10 +647,8 @@ function Chat() {
             )}
 
             <div className="center" ref={topRef} onScroll={handleScroll}>
-                {loading && <div className="loading">Загрузка сообщений...</div>}
-                
-                {messages.slice().map(renderMessage)}
-                
+                {isLoadingMore && <div className="loading">Загрузка предыдущих сообщений...</div>}
+                {messages.map(renderMessage)}
                 <div ref={endRef}></div>
             </div>
 
