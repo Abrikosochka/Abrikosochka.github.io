@@ -279,6 +279,7 @@
     border-radius: 12px;
     font-size: 12px;
     margin-top: 5px;
+    margin-left: 10px;
 }
 
 .user-card:has(.current-user-badge) {

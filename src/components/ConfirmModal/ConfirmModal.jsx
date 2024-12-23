@@ -1,13 +1,13 @@
 import React from 'react';
-import './deleteConfirmModal.css';
+import './confirmModal.css';
 
-function DeleteConfirmModal({ onConfirm, onCancel, chatName }) {
+function ConfirmModal({ message, onConfirm, onCancel }) {
     return (
-        <div className="delete-modal-overlay">
-            <div className="delete-modal">
-                <h3>Вы действительно хотите удалить чат?</h3>
-                <p className="chat-name">{chatName}</p>
-                <div className="delete-modal-buttons">
+        <div className="confirm-modal-overlay">
+            <div className="confirm-modal">
+                <h3>Подтверждение действия</h3>
+                <p className="confirm-message">{message}</p>
+                <div className="confirm-modal-buttons">
                     <button 
                         className="cancel-button" 
                         onClick={onCancel}
@@ -18,7 +18,7 @@ function DeleteConfirmModal({ onConfirm, onCancel, chatName }) {
                         className="confirm-button" 
                         onClick={onConfirm}
                     >
-                        Удалить
+                        Подтвердить
                     </button>
                 </div>
             </div>
@@ -26,4 +26,4 @@ function DeleteConfirmModal({ onConfirm, onCancel, chatName }) {
     );
 }
 
-export default DeleteConfirmModal; 
+export default ConfirmModal; 

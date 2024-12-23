@@ -72,25 +72,33 @@ function UpdateUser({ onClose }) {
         e.preventDefault();
         
         // Проверяем, есть ли какие-либо изменения
-        if (!formData.username && !formData.status && !formData.avatar.file) {
+        if (!formData.username.trim() && !formData.status.trim() && !formData.avatar.file) {
             toast.warn("Нет изменений для сохранения");
             return;
         }
 
         // Проверяем имя пользователя
         if (formData.username) {
-            if (!formData.username.trim()) {
-                toast.warn("Имя пользователя не может быть пустым или содержать только пробелы");
+            if(currentUser.username === formData.username) {
+                toast.warn("Имя пользователя не должно совпадать с текущим");
                 return;
             }
             if (formData.username.length > 20) {
                 toast.warn("Имя пользователя не должно превышать 20 символов");
                 return;
             }
+            if (!/(?=.*[a-zA-Z])(?=.*[а-яА-Я])|([a-zA-Z].*[a-zA-Z])|([а-яА-Я].*[а-яА-Я])/.test(formData.username)) {
+                toast.warn("Имя пользователя должно содержать как минимум 2 символа");
+                return;
+            }
         }
 
         // Проверяем статус
         if (formData.status) {
+            if (currentUser.status === formData.status) {
+                toast.warn("Статус не должен совпадать с текущим");
+                return;
+            }
             if (formData.status.length > 50) {
                 toast.warn("Статус не должен превышать 50 символов");
                 return;
@@ -104,6 +112,8 @@ function UpdateUser({ onClose }) {
             if (formData.avatar.file) {
                 avatarUrl = await uploadAvatar(formData.avatar.file);
             }
+
+            console.log(currentUser);
 
             const { data, error } = await supabase.rpc('update_user_info', {
                 p_user_id: parseInt(currentUser.id),
@@ -125,7 +135,11 @@ function UpdateUser({ onClose }) {
 
         } catch (err) {
             console.error('Ошибка при обновлении:', err);
-            toast.error("Произошла ошибка при обновлении данных");
+            if (err.message === "Это имя пользователя уже занято") {
+                toast.error("Это имя пользователя уже занято");
+            } else {
+                toast.error("Произошла ошибка при обновлении данных");
+            }
         } finally {
             setLoading(false);
         }

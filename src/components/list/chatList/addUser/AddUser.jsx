@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
 import { getCurrentUserId, addChat } from "../../../../lib/auth";
 import { useChatStore } from "../../../../lib/chatStore";
+import { toast } from "react-toastify";
 
 function AddUser({ onClose }) {
     const [searchResults, setSearchResults] = useState([]);
@@ -78,6 +79,11 @@ function AddUser({ onClose }) {
             }
 
             const memberIds = selectedUsers.map(user => user.id);
+
+            if(!groupName.trim()){
+                toast.error("Вы не ввели название группы");
+                return;
+            }
 
             const { data: newChat, error } = await supabase
                 .rpc('create_chat_with_members', {

@@ -27,7 +27,7 @@ function Chat() {
     console.log('Chat component initialized');
     
     const { currentUser } = useUserStore();
-    const { currentChat } = useChatStore();
+    const { currentChat, clearCurrentChat } = useChatStore();
 
     // Добавляем подробные логи
     console.log('=== Chat Component Debug ===');
@@ -493,7 +493,7 @@ function Chat() {
 
     const handleDelete = async (messageId) => {
         try {
-            const { data, error } = await supabase.rpc('delete_messages', {
+            const { data, error } = await supabase.rpc('delete_messages ', {
                 p_message_id: messageId,
                 p_user_id: parseInt(currentUser.id)
             });
@@ -644,6 +644,15 @@ function Chat() {
                         <span>{currentChat.displayName}</span>
                         <p>{currentChat.displayStatus}</p>
                     </div>
+                </div>
+                <div className="chat-controls">
+                    <button 
+                        className="hide-chat-btn"
+                        onClick={() => clearCurrentChat()}
+                        title="Скрыть чат"
+                    >
+                        –
+                    </button>
                 </div>
             </div>
 

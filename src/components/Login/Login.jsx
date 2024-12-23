@@ -43,7 +43,7 @@ function Login({ onLoginSuccess }) {
             const formData = new FormData(e.target)
             const {email, password} = Object.fromEntries(formData);
 
-            if (!email || !password)
+            if (!email.trim() || !password.trim())
                 return toast.warn("Пожалуйста, заполните все поля!");
 
             if (password.length < 6) {
@@ -54,45 +54,30 @@ function Login({ onLoginSuccess }) {
                 return toast.warn("Пароль не должен превышать 20 символов");
             }
 
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailPattern.test(email)) {
                 return toast.warn("Пожалуйста, введите корректный email адрес");
             }
 
-            const { data: userId, error } = await supabase.rpc('check_user_credentials', {
+            const { data, error } = await supabase.rpc('check_user_credentials', {
                 p_email: email,
                 p_password: password
             });
 
             if (error) console.error(error);
 
-
-            if (userId > 0) {
-                // Теперь получаем данные
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('id, username, email, avatar, status, is_admin')
-                    .eq('id', userId);
-
-                if (userError) console.error(userError);
-
-                const user = userData[0]; // Берем первого пользователя
-
-                // Сохраняем данные
-                setCurrentUser(userId, user);
-                setStoreUser(user);
-                onLoginSuccess(userId);
-                toast.success('Welcome!');
-            } else {
-                switch (userId) {
-                    case -1:
-                        toast.error("There is no user with this Email address");
-                        break;
-                    case -2:
-                        toast.error('Incorrect password');
-                        break;
-                    default:
-                        toast.error('Unknown error occurred');
+            if(data){
+                if (data[0].id == -1) {
+                    toast.error("Такого пользователя не существует");
+                    return;
+                } else if(data[0].id == -2){
+                    toast.error('Неправильный пароль');
+                    return;
+                } else {
+                    setCurrentUser(data[0].id, data[0]);
+                    setStoreUser(data[0]);
+                    onLoginSuccess(data[0].id);
+                    toast.success('Добро пожаловать!');
                 }
             }
 
@@ -121,6 +106,10 @@ function Login({ onLoginSuccess }) {
                 return toast.warn("Имя пользователя не должно превышать 20 символов");
             }
 
+            if (!/(?=.*[a-zA-Z])(?=.*[а-яА-Я])|([a-zA-Z].*[a-zA-Z])|([а-яА-Я].*[а-яА-Я])/.test(username)) {
+                return toast.warn("Имя пользователя должно содержать как минимум 2 символа");
+            }
+
             if (password.length < 6) {
                 return toast.warn("Пароль должен содержать минимум 6 символов");
             }
@@ -129,11 +118,7 @@ function Login({ onLoginSuccess }) {
                 return toast.warn("Пароль не должен превышать 20 символов");
             }
 
-            if (!avatar.file) {
-                return toast.warn("Please upload an avatar!");
-            }
-
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailPattern.test(email)) {
                 return toast.warn("Please enter a valid email address");
             }
@@ -180,13 +165,13 @@ function Login({ onLoginSuccess }) {
                         file: null,
                         url: ""
                     });
-                    toast.success("Account created! You can login now!");
+                    toast.success("Аккаунт создан! Вы можете войти в систему");
                     break;
                 case -1:
-                    toast.error('Username already taken');
+                    toast.error('Такое имя пользователя уже занято');
                     break;
                 case -2:
-                    toast.error('Email is already in use');
+                    toast.error('Такой email уже занят');
                     break;
                 default:
                     toast.error('Unknown error occurred');

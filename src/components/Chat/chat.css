@@ -27,6 +27,7 @@
         align-items: center;
         justify-content: space-between;
         border-bottom: 1px solid #dddddd35;
+        position: relative;
 
         .user{
             display: flex;
@@ -67,6 +68,38 @@
                 height: 20px;
                 cursor: pointer;
             }
+        }
+
+        .chat-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hide-chat-btn {
+            background: none;
+            border: none;
+            color: #ddddf7;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .hide-chat-btn:hover {
+            background-color: rgba(221, 221, 247, 0.1);
+            color: #b838c4;
+            transform: scale(1.1);
+        }
+
+        .hide-chat-btn:active {
+            transform: scale(0.95);
         }
     }
 
@@ -247,7 +280,7 @@
             .picker{
                 position: absolute;
                 bottom: 50px;
-                left: 0;
+                left: -200px;
             }
         }
 

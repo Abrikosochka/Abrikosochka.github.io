@@ -3,6 +3,7 @@ import { supabase } from '../../../../lib/supabaseClient';
 import { toast } from 'react-toastify';
 import './adminPage.css';
 import { getCurrentUser } from '../../../../lib/auth';
+import ConfirmModal from '../../../../components/ConfirmModal/ConfirmModal';
 
 function AdminPage({ onClose }) {
     const [users, setUsers] = useState([]);
@@ -11,6 +12,8 @@ function AdminPage({ onClose }) {
     const [newEmail, setNewEmail] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const currentUser = getCurrentUser();
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null);
 
     const fetchUsers = async () => {
         try {
@@ -68,19 +71,22 @@ function AdminPage({ onClose }) {
         }
     };
 
-    const handleDelete = async (userId) => {
-        if (!window.confirm('Вы уверены, что хотите удалить этого пользователя?')) {
-            return;
-        }
+    const handleDeleteClick = (userId) => {
+        setUserToDelete(userId);
+        setShowConfirmModal(true);
+    };
 
+    const handleDelete = async () => {
         try {
             const { error } = await supabase.rpc('admin_delete_user', {
-                p_user_id: userId
+                p_user_id: userToDelete
             });
 
             if (error) throw error;
 
             toast.success('Пользователь удален');
+            setShowConfirmModal(false);
+            setUserToDelete(null);
             fetchUsers();
         } catch (err) {
             console.error('Ошибка удаления:', err);
@@ -116,7 +122,7 @@ function AdminPage({ onClose }) {
                                 </button>
                                 {user.id !== currentUser.id && (
                                     <button 
-                                        onClick={() => handleDelete(user.id)}
+                                        onClick={() => handleDeleteClick(user.id)}
                                         className="delete-btn"
                                     >
                                         Удалить
@@ -161,6 +167,17 @@ function AdminPage({ onClose }) {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {showConfirmModal && (
+                <ConfirmModal
+                    message="Вы уверены, что хотите удалить этого пользователя?"
+                    onConfirm={handleDelete}
+                    onCancel={() => {
+                        setShowConfirmModal(false);
+                        setUserToDelete(null);
+                    }}
+                />
             )}
         </div>
     );
