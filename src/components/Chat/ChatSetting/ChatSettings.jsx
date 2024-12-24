@@ -153,6 +153,10 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
                 return toast.warn("Измените название чата");
             }
 
+            if(chatName.trim().length > 30) {
+                return toast.warn("Название чата не должно быть больше 30 символов");
+            }
+
             // Если пользователь загрузил новое изображение, загружаем его в Supabase
             if (chatPicture.file) {
                 const uploadedUrl = await uploadChatPicture(chatPicture.file);
@@ -165,7 +169,11 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
 
             console.log(imageUrl);
 
-            if(chatName.trim() || !imageUrl) {
+            if(!/\.(jpg|png|jpeg)$/i.test(imageUrl)) {
+                return toast.warn("Неверный формат изображения");
+            }
+
+            if(chatName.trim() || imageUrl) {
                 const { data, error } = await supabase.rpc('update_group_chat', {
                     p_chat_id: chat.chat_id,
                     p_admin_id: currentUser.id,
@@ -231,7 +239,7 @@ function ChatSettings({ chat, currentUser, onClose, onUpdate }) {
                 }
             }
             else {
-                toast.warn("Ничего не изменено");
+                return toast.warn("Ничего не изменено");
             }
         } catch (err) {
             console.error('Ошибка:', err);

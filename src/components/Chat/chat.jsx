@@ -270,7 +270,7 @@ function Chat() {
             },
             async (payload) => {
                 console.log('Новое сообщение:', payload);
-                
+
                 try {
                     // Получаем данные отправителя
                     const { data: userData, error: userError } = await supabase
@@ -287,7 +287,7 @@ function Chat() {
                         chat_id: payload.new.chat_id,
                         sender_id: payload.new.sender_id,
                         content: payload.new.content,
-                        date: payload.new.date, 
+                        date: payload.new.date,
                         is_edit: payload.new.is_edit,
                         sender_username: userData.username,
                         sender_avatar: userData.avatar || "/avatar.png" // Добавляем дефолтную аватарку
@@ -317,16 +317,74 @@ function Chat() {
                     console.error('Ошибка при обработке нового сообщения:', error);
                 }
             }
+        )
+        .on(
+            'postgres_changes',
+            {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'messages'
+            },
+            (payload) => {
+                console.log('Получено событие удаления:', payload);
+                
+                // Обработка удаления сообщения
+                setMessages(prevMessages => {
+                    console.log('Текущие сообщения:', prevMessages);
+                    console.log('Удаляемое ID:', payload.old.id);
+                    
+                    const updatedMessages = prevMessages.filter(
+                        message => message.message_id !== payload.old.id
+                    );
+                    
+                    console.log('Обновленные сообщения:', updatedMessages);
+                    setChatMessages(currentChat.chat_id, updatedMessages);
+                    return updatedMessages;
+                });
+
+                // // Обновление последнего сообщения, если удалено оно
+                // const wasLastMessage = messages[messages.length - 1]?.message_id === payload.old.id;
+                // if (wasLastMessage) {
+                //     setLastMessage(currentChat.chat_id, null);
+                // }
+            }
+        )
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'messages',
+                filter: `chat_id=eq.${currentChat.chat_id}`,
+            },
+            async (payload) => {
+                console.log('Сообщение обновлено:', payload);
+
+                // Обработка редактирования сообщения
+                setMessages(prevMessages => {
+                    const updatedMessages = prevMessages.map(message =>
+                        message.message_id === payload.new.id
+                            ? { ...message, content: payload.new.content, is_edit: true }
+                            : message
+                    );
+                    setChatMessages(currentChat.chat_id, updatedMessages);
+                    return updatedMessages;
+                });
+
+                // Обновление последнего сообщения, если оно редактировалось
+                // setLastMessage(currentChat.chat_id, {
+                //     content: payload.new.content,
+                //     date: payload.new.date,
+                //     sender_name: payload.new.sender_id, // Используйте username из payload или получите через запрос
+                // });
+            }
         );
 
-        // Подписываемся на канал
-        channelA.subscribe((status) => {
-            console.log(`Статус подписки для чата ${currentChat.chat_id}:`, status);
-        });
+        // Подписка на изменения
+        channelA.subscribe();
 
-        // Отписываемся при размонтировании компонента или смене чата
+        // Очистка подписки при размонтировании компонента
         return () => {
-            console.log('Отписываемся от чата:', currentChat.chat_id);
             channelA.unsubscribe();
         };
     }, [currentChat]);
@@ -472,10 +530,14 @@ function Chat() {
 
     const handleDelete = async (messageId) => {
         try {
-            const { data, error } = await supabase.rpc('delete_messages ', {
+            console.log('Пытаемся удалить сообщение:', messageId);
+            
+            const { data, error } = await supabase.rpc('delete_messages', {
                 p_message_id: messageId,
                 p_user_id: parseInt(currentUser.id)
             });
+
+            console.log('Ответ от сервера:', { data, error });
 
             if (error) throw error;
             if (!data) {
@@ -500,11 +562,18 @@ function Chat() {
                         sender_name: newLastMsg.sender_username
                     });
                 }
+                else {
+                    setLastMessage(currentChat.chat_id, {
+                        content: null,
+                        date: null,
+                        sender_name: null
+                    });
+                }
             }
 
         } catch (error) {
-            console.error('Ошибка при удалении сообщения:', error);
-            setError('Не удалось удалить сообщение');
+            console.error('Подробная ошибка при удалении:', error);
+            setError(`Не удалось удалить сообщение: ${error.message}`);
         }
     };
 

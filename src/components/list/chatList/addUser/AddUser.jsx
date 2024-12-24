@@ -85,6 +85,10 @@ function AddUser({ onClose }) {
                 return;
             }
 
+            if(isGroup && groupName.trim().length > 30) {
+                return toast.warn("Название группы не должно быть больше 30 символов");
+            }
+
             const { data: newChat, error } = await supabase
                 .rpc('create_chat_with_members', {
                     is_group_chat: isGroup,

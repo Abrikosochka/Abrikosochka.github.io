@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabaseClient.js";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PropTypes from 'prop-types';
+import { transliterate } from 'transliteration'
 
 function Login({ onLoginSuccess }) {
 
@@ -127,7 +128,9 @@ function Login({ onLoginSuccess }) {
 
             if (avatar.file) {
                 const fileExt = avatar.file.name.split('.').pop();
-                const fileName = `${username}-${Date.now()}.${fileExt}`;
+                const safeUsername = transliterate(username).replace(/[^a-zA-Z0-9_-]/g, '');
+                console.log(safeUsername);
+                const fileName = `${safeUsername}-${Date.now()}.${fileExt}`;
                 const filePath = `${fileName}`;
 
                 try {

@@ -4,6 +4,7 @@ import { supabase } from "../../../../lib/supabaseClient";
 import { getCurrentUser, updateCurrentUserData } from "../../../../lib/auth";
 import { useUserStore } from "../../../../lib/userStore";
 import { toast } from 'react-toastify';
+import { transliterate } from 'transliteration';
 
 function UpdateUser({ onClose }) {
     const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ function UpdateUser({ onClose }) {
 
     const handleAvatarChange = (e) => {
         const file = e.target.files[0];
-        if (file) {
+        if (file && (file.type === 'image/png' || file.type === 'image/jpg' || file.type === 'image/jpeg')) {
             console.log('File selected:', {
                 name: file.name,
                 type: file.type,
@@ -35,11 +36,16 @@ function UpdateUser({ onClose }) {
                 }
             }));
         }
+        else {
+            return toast.warn("Неверный формат изображения");
+        }
     };
 
     const uploadAvatar = async (file) => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${currentUser.username}-${Date.now()}.${fileExt}`;
+        const safeUsername = transliterate(currentUser.username).replace(/[^a-zA-Z0-9_-]/g, '');
+        console.log(safeUsername);
+        const fileName = `${safeUsername}-${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
 
         try {
