@@ -191,20 +191,20 @@ function Login({ onLoginSuccess }) {
     return (
         <div className="login">
             <div className="item">
-                <h2>Welcome back</h2>
+                <h2>С возвращением!</h2>
                 <form onSubmit={handleLogin}>
-                    <input type="text" placeholder="Email" name="email" />
-                    <input type="password" placeholder="Password" name="password" />
-                    <button disabled={loading}>{loading ? "Loading" : "Sign In"}</button>
+                    <input type="text" placeholder="Почта" name="email" />
+                    <input type="password" placeholder="Пароль" name="password" />
+                    <button disabled={loading}>{loading ? "Loading" : "Вход"}</button>
                 </form>
             </div>
             <div className="separator"></div>
             <div className="item">
-                <h2>Create an Account</h2>
+                <h2>Создайте аккаунт</h2>
                 <form onSubmit={handleRegister}>
                     <label htmlFor="file">
                         <img src={avatar.url || "../../../public/avatar.png"} alt="" />
-                        Upload an image
+                        Загрузите аватар
                     </label>
                     <input
                         type="file"
@@ -213,11 +213,11 @@ function Login({ onLoginSuccess }) {
                         onChange={handleAvatar}
                         accept="image/*"
                     />
-                    <input type="text" placeholder="Username" name="username" />
-                    <input type="text" placeholder="Email" name="email" />
-                    <input type="password" placeholder="Password" name="password" />
+                    <input type="text" placeholder="Никнейм" name="username" />
+                    <input type="text" placeholder="Почта" name="email" />
+                    <input type="password" placeholder="Пароль" name="password" />
                     <button disabled={loading}>
-                        {loading ? "Loading..." : "Sign Up"}
+                        {loading ? "Loading..." : "Регистрация"}
                     </button>
                 </form>
             </div>

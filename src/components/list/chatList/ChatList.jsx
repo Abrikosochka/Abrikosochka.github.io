@@ -468,7 +468,7 @@ function ChatList() {
                     <img src="/search.png" alt="search"/>
                     <input
                         type="text"
-                        placeholder="Search"
+                        placeholder="Поиск чатов"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                     />
